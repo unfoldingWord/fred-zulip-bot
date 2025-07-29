@@ -1,2 +1,3 @@
-# fred-zulip-bot
-Repo for the FRED Zulip bot. 
+# This is the repo for the Fred AI.
+
+
