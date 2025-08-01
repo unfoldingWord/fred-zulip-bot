@@ -77,6 +77,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+intent_prompt = (
+    "You are an intent classifier. A user has sent a message."
+    "Your task is to classify their intent into one of the following categories:\n"
+    "- database: The user wants to query or access information from the database.\n"
+    "- chatbot: The user is asking about the chatbot itself, like its purpose, name, capabilities, etc.\n"
+    "- other: Anything that does not fit the above categories.\n"
+    "Respond ONLY with one of the following words: database, chatbot, other.\n"
+)
+
+chatbot_prompt = (
+    "You are Fred, an AI-powered assistant integrated with Zulip. The database you are an interface for has a lot"
+    "of information relating to unfoldingWord’s work in Bible translation. Fred generates safe, read-only SQL"
+    "queries based on the user's natural language request. However, Fred is not an SQL assistant and doesn’t help"
+    "the user with questions about SQL. It has access to the database schema and follows strict system rules when"
+    "generating SQL. It executes safe queries (only SELECT/read operations) and summarizes the results in natural"
+    "language. The user is asking about you directly—a question like what you do, how you work, or what your name is."
+    "Answer clearly and briefly, as a helpful assistant would. Don't generate SQL or refer to specific database contents."
+)
+
+other_prompt = (
+    "You are Fred, an AI-powered assistant integrated with Zulip. The database you are an interface for has a lot"
+    "of information relating to unfoldingWord’s work in Bible translation. Fred generates safe, read-only SQL"
+    "queries based on the user's natural language request. However, Fred is not an SQL assistant and doesn’t help"
+    "the user with questions about SQL. It has access to the database schema and follows strict system rules when"
+    "generating SQL. It executes safe queries (only SELECT/read operations) and summarizes the results in natural"
+    "language. The user has asked something of you that is an unsupported function of this chatbot. Kindly explain"
+    "to the user that you can't help them with that, and redirect them by informing them of things you can do."
+)
+
 sql_prompt = (
     "You are an SQL assistant.You will generate SQL queries based on the the user's request and the database information that was given to you."
     "Only return the SQL query — no explanation, no Markdown, no code block formatting."
@@ -95,6 +124,21 @@ answer_prompt = (
 
 # Initialize genai client
 genai.configure(api_key=config.GENAI_API_KEY)
+
+intent_model = genai.GenerativeModel(
+    model_name="gemini-2.5-pro",
+    system_instruction=intent_prompt
+)
+
+chatbot_model = genai.GenerativeModel(
+    model_name="gemini-2.5-pro",
+    system_instruction=chatbot_prompt
+)
+
+other_model = genai.GenerativeModel(
+    model_name="gemini-2.5-pro",
+    system_instruction=other_prompt
+)
 
 sql_model = genai.GenerativeModel(
     model_name = "gemini-2.5-pro",
@@ -144,45 +188,77 @@ def save_history(email: str, history):
 
 
 def process_user_message(message):
-
     try:
         history = load_history(message.sender_email)
 
-        sql_chat_session = sql_model.start_chat(history=history)
-
         logger.info("%s sent message '%s'", message.sender_email, message.content)
 
-        sql_message = sql_chat_session.send_message(message.content)
+        # Determine intent
+        intent_response = intent_model.generate_content(message.content)
+        intent = intent_response.text.strip().lower()
 
-        logger.info("sql generated: %s", sql_message.text)
+        logger.info("Intent classified as: %s", intent)
 
-        history.append({"role": "user", "parts": [message.content]})
-        history.append({"role": "model", "parts": [sql_message.text]})
+        response = ""
 
-        answer_chat_session = answer_model.start_chat(history=history)
+        if intent == "chatbot":
+            chatbot_session = chatbot_model.start_chat(history=history)
+            chatbot_reply = chatbot_session.send_message(message.content)
 
-        if not is_safe_sql(sql_message.text):
-            raise ValueError("Unsafe SQL query detected — blocked from execution.")
+            history.append({"role": "user", "parts": [message.content]})
+            history.append({"role": "model", "parts": [chatbot_reply.text]})
+            save_history(message.sender_email, history)
 
-        database_data = submit_query(sql_message.text)
+            response = chatbot_reply.text
 
-        answer_request = (f"The sql query returned {database_data}."
-                          "Answer the user's question using this data.")
+        elif intent == "other":
+            other_session = other_model.start_chat(history=history)
+            other_reply = other_session.send_message(message.content)
 
-        answer_message = answer_chat_session.send_message(answer_request)
+            history.append({"role": "user", "parts": [message.content]})
+            history.append({"role": "model", "parts": [other_reply.text]})
+            save_history(message.sender_email, history)
 
-        history.append({"role": "model", "parts": [database_data]})
-        history.append({"role": "model", "parts": [answer_message.text]})
+            response = other_reply.text
 
-        logger.info("fred response: %s", answer_message.text)
 
-        save_history(message.sender_email, history)
+        elif intent == "database":
+            # Default case: treat as database query
+            sql_chat_session = sql_model.start_chat(history=history)
+            sql_message = sql_chat_session.send_message(message.content)
+
+            logger.info("SQL generated: %s", sql_message.text)
+
+            history.append({"role": "user", "parts": [message.content]})
+            history.append({"role": "model", "parts": [sql_message.text]})
+
+            if not is_safe_sql(sql_message.text):
+                raise ValueError("Unsafe SQL query detected — blocked from execution.")
+
+            database_data = submit_query(sql_message.text)
+
+            answer_chat_session = answer_model.start_chat(history=history)
+
+            answer_request = (
+                f"The SQL query returned {database_data}. "
+                "Answer the user's question using this data."
+            )
+            answer_message = answer_chat_session.send_message(answer_request)
+
+            history.append({"role": "model", "parts": [database_data]})
+            history.append({"role": "model", "parts": [answer_message.text]})
+
+            save_history(message.sender_email, history)
+
+            response = answer_message.text
+
+        logger.info("Fred response: %s", response)
 
         send_zulip_message(
-            to = [message.sender_email],
-            msg_type = message.type,
-            subject = message.subject,  # Stream messages need subject
-            content = answer_message.text
+            to=[message.sender_email],
+            msg_type=message.type,
+            subject=message.subject,
+            content=response
         )
 
     except Exception as e:
