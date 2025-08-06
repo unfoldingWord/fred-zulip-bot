@@ -1,0 +1,510 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2821
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 -- `uw-data-tracking-stage`.bible_info definition\
+\
+CREATE TABLE `bible_info` (\
+  `scriptural_association` varchar(255) NOT NULL,\
+  `num_chapter` int(11) DEFAULT NULL,\
+  `num_verses` int(11) DEFAULT NULL,\
+  `book_order` int(11) DEFAULT NULL,\
+  `bible_section` varchar(8) DEFAULT NULL,\
+  `book_bible_code` varchar(255) DEFAULT NULL,\
+  PRIMARY KEY (`scriptural_association`)\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.countries definition\
+\
+CREATE TABLE `countries` (\
+  `english_short_name` varchar(60) DEFAULT NULL,\
+  `world_region` varchar(50) DEFAULT NULL,\
+  `alpha_2_code` varchar(50) DEFAULT NULL,\
+  `alpha_3_code` varchar(50) NOT NULL,\
+  PRIMARY KEY (`alpha_3_code`)\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.ietf_languages_codes definition\
+\
+CREATE TABLE `ietf_languages_codes` (\
+  `anglicized_name` varchar(255) DEFAULT NULL,\
+  `subtag_new` varchar(255) NOT NULL,\
+  `macrolanguage` varchar(255) DEFAULT NULL,\
+  `language_script` varchar(255) DEFAULT NULL,\
+  `date_added` date DEFAULT NULL,\
+  `ietf_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `iso_639_2` varchar(255) DEFAULT NULL,\
+  `iso_639_1` varchar(255) DEFAULT NULL,\
+  `primary_anglicized_name` varchar(255) NOT NULL,\
+  `alternative_names` varchar(255) DEFAULT NULL,\
+  `combined_anglicized_name` varchar(510) GENERATED ALWAYS AS (case when `alternative_names` is not null and trim(`alternative_names`) <> _utf8mb4'' then concat(`primary_anglicized_name`,_utf8mb4', ',trim(`alternative_names`)) else `primary_anglicized_name` end) STORED,\
+  `marked_delete` int(11) DEFAULT 0,\
+  `delete_timestamp` date DEFAULT NULL,\
+  PRIMARY KEY (`ietf_id`),\
+  UNIQUE KEY `ietf_languages_codes_unique` (`subtag_new`)\
+) ENGINE=InnoDB AUTO_INCREMENT=8178 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.joshua_project_data definition\
+\
+CREATE TABLE `joshua_project_data` (\
+  `jp_id` bigint(20) DEFAULT NULL,\
+  `peopleid3rog3` text DEFAULT NULL,\
+  `peopleid3` bigint(20) DEFAULT NULL,\
+  `peopnameincountry` text DEFAULT NULL,\
+  `country_name` text DEFAULT NULL,\
+  `country_code` text DEFAULT NULL,\
+  `leastreached` text DEFAULT NULL,\
+  `primarylanguagename` text DEFAULT NULL,\
+  `rol3` text DEFAULT NULL,\
+  `population` double DEFAULT NULL,\
+  `jpscale` bigint(20) DEFAULT NULL,\
+  `biblestatus` bigint(20) DEFAULT NULL,\
+  `frontier` text DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.language_engagement_metadata definition\
+\
+CREATE TABLE `language_engagement_metadata` (\
+  `metadata_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `language_engagement_id` int(11) NOT NULL,\
+  `communication_date` date DEFAULT NULL,\
+  `created_by` varchar(100) DEFAULT NULL,\
+  `note` longtext NOT NULL,\
+  PRIMARY KEY (`metadata_id`),\
+  KEY `language_engagement_metadata_language_engagements_FK` (`language_engagement_id`),\
+  CONSTRAINT `language_engagement_metadata_language_engagements_FK` FOREIGN KEY (`language_engagement_id`) REFERENCES `language_engagements` (`language_engagement_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=181 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.language_engagements definition\
+\
+CREATE TABLE `language_engagements` (\
+  `country_id` varchar(3) NOT NULL,\
+  `uw_rep_id` int(11) DEFAULT NULL,\
+  `language_engagement_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `ietf_id` int(11) NOT NULL,\
+  `translation_organization_id` int(11) NOT NULL,\
+  `sensitivity` varchar(255) DEFAULT NULL,\
+  `population` int(11) DEFAULT NULL,\
+  `partner_goal` varchar(255) DEFAULT 'Bible',\
+  `language_cluster` varchar(255) DEFAULT NULL,\
+  PRIMARY KEY (`language_engagement_id`),\
+  UNIQUE KEY `language_engagements_unique` (`translation_organization_id`,`ietf_id`,`country_id`),\
+  KEY `language_engagements_countries_FK` (`country_id`),\
+  KEY `language_engagements_ietf_languages_codes_FK` (`ietf_id`),\
+  CONSTRAINT `language_engagements_countries_FK` FOREIGN KEY (`country_id`) REFERENCES `countries` (`alpha_3_code`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `language_engagements_ietf_languages_codes_FK` FOREIGN KEY (`ietf_id`) REFERENCES `ietf_languages_codes` (`ietf_id`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `language_engagements_organizations_FK` FOREIGN KEY (`translation_organization_id`) REFERENCES `organizations` (`org_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=490 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.language_engagements_organizations definition\
+\
+CREATE TABLE `language_engagements_organizations` (\
+  `language_engagement_id` int(11) NOT NULL,\
+  `org_id` int(11) NOT NULL,\
+  `role` varchar(100) DEFAULT NULL,\
+  PRIMARY KEY (`org_id`,`language_engagement_id`),\
+  KEY `language_engagements_organizations_language_engagements_FK` (`language_engagement_id`),\
+  CONSTRAINT `language_engagements_organizations_language_engagements_FK` FOREIGN KEY (`language_engagement_id`) REFERENCES `language_engagements` (`language_engagement_id`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `language_engagements_organizations_organizations_FK` FOREIGN KEY (`org_id`) REFERENCES `organizations` (`org_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.master_uw_language_engagements definition\
+\
+CREATE TABLE `master_uw_language_engagements` (\
+  `language_engagement_id` bigint(20) DEFAULT NULL,\
+  `ietf_id` bigint(20) DEFAULT NULL,\
+  `primary_anglicized_name` text DEFAULT NULL,\
+  `alternative_names` text DEFAULT NULL,\
+  `subtag_new` text DEFAULT NULL,\
+  `resource_level` bigint(20) DEFAULT NULL,\
+  `english_short_name` text DEFAULT NULL,\
+  `country_id` text DEFAULT NULL,\
+  `abbreviation` text DEFAULT NULL,\
+  `uw_rep_id` bigint(20) DEFAULT NULL,\
+  `name` text DEFAULT NULL,\
+  `translation_organization_id` bigint(20) DEFAULT NULL,\
+  `iso_639_2` text DEFAULT NULL,\
+  `world_region` text DEFAULT NULL,\
+  `alpha_2_code` text DEFAULT NULL,\
+  `sensitivity` text DEFAULT NULL,\
+  `activetranslation` text DEFAULT NULL,\
+  `allaccessstatus` text DEFAULT NULL,\
+  `allaccessgoal` text DEFAULT NULL,\
+  `aag_elligible` text DEFAULT NULL,\
+  `combined_anglicized_name` text DEFAULT NULL,\
+  `completed_scripture` text DEFAULT NULL,\
+  `project_status` text DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.master_uw_translation_projects definition\
+\
+CREATE TABLE `master_uw_translation_projects` (\
+  `id` bigint(20) DEFAULT NULL,\
+  `source_language_code` text DEFAULT NULL,\
+  `resource_package` text DEFAULT NULL,\
+  `scripture_text_name` text DEFAULT NULL,\
+  `scriptural_association` text DEFAULT NULL,\
+  `translation_type` text DEFAULT NULL,\
+  `resource_format` text DEFAULT NULL,\
+  `start_date` text DEFAULT NULL,\
+  `published_date` text DEFAULT NULL,\
+  `product_status` text DEFAULT NULL,\
+  `language_engagement_id` bigint(20) DEFAULT NULL,\
+  `pb_engagement` text DEFAULT NULL,\
+  `completed_date` text DEFAULT NULL,\
+  `ietf_id` bigint(20) DEFAULT NULL,\
+  `primary_anglicized_name` text DEFAULT NULL,\
+  `alternative_names` text DEFAULT NULL,\
+  `subtag_new` text DEFAULT NULL,\
+  `resource_level` bigint(20) DEFAULT NULL,\
+  `english_short_name` text DEFAULT NULL,\
+  `country_id` text DEFAULT NULL,\
+  `abbreviation` text DEFAULT NULL,\
+  `uw_rep_id` bigint(20) DEFAULT NULL,\
+  `name` text DEFAULT NULL,\
+  `translation_organization_id` bigint(20) DEFAULT NULL,\
+  `iso_639_2` text DEFAULT NULL,\
+  `world_region` text DEFAULT NULL,\
+  `alpha_2_code` text DEFAULT NULL,\
+  `sensitivity` text DEFAULT NULL,\
+  `activetranslation` text DEFAULT NULL,\
+  `allaccessstatus` text DEFAULT NULL,\
+  `allaccessgoal` text DEFAULT NULL,\
+  `aag_elligible` text DEFAULT NULL,\
+  `combined_anglicized_name` text DEFAULT NULL,\
+  `completed_scripture` text DEFAULT NULL,\
+  `bible_book_ref` text DEFAULT NULL,\
+  `BP_num` bigint(20) DEFAULT NULL,\
+  `project_status` text DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.organizations definition\
+\
+CREATE TABLE `organizations` (\
+  `name` varchar(255) NOT NULL,\
+  `sensitivity` varchar(255) DEFAULT NULL,\
+  `data_usage_permission` varchar(255) DEFAULT NULL,\
+  `org_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `cbbt_spectrum` varchar(100) DEFAULT NULL,\
+  `org_type` varchar(100) DEFAULT NULL,\
+  `marked_delete` int(11) DEFAULT 0,\
+  `delete_timestamp` date DEFAULT NULL,\
+  `pb_org_id` varchar(100) DEFAULT NULL,\
+  `org_status` varchar(555) DEFAULT NULL,\
+  PRIMARY KEY (`org_id`),\
+  UNIQUE KEY `network_information_unique` (`name`)\
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.pb_all_translation_projects definition\
+\
+CREATE TABLE `pb_all_translation_projects` (\
+  `Continent` varchar(255) DEFAULT NULL,\
+  `Country` varchar(255) DEFAULT NULL,\
+  `Country_Code` varchar(255) DEFAULT NULL,\
+  `Language_Name` varchar(255) DEFAULT NULL,\
+  `Language_Code` varchar(255) DEFAULT NULL,\
+  `Language_Variety_Code` varchar(255) DEFAULT NULL,\
+  `Is_Sign_Language` varchar(255) DEFAULT NULL,\
+  `Is_ISO_Recognized` varchar(255) DEFAULT NULL,\
+  `First_Language_Population_Group` varchar(255) DEFAULT NULL,\
+  `First_Language_Population` int(11) DEFAULT NULL,\
+  `EGIDS_Group` varchar(255) DEFAULT NULL,\
+  `EGIDS_Level` varchar(255) DEFAULT NULL,\
+  `All_Access_Goal` varchar(255) DEFAULT NULL,\
+  `All_Access_Status` varchar(255) DEFAULT NULL,\
+  `Eligible_For_ETEN_Funding` varchar(255) DEFAULT NULL,\
+  `Completed_Scripture` varchar(255) DEFAULT NULL,\
+  `Latest_Publication_Year` int(11) DEFAULT NULL,\
+  `Organization_Name` varchar(255) DEFAULT NULL,\
+  `Project_Name` varchar(255) DEFAULT NULL,\
+  `Domain` varchar(255) DEFAULT NULL,\
+  `Activity` varchar(2255) DEFAULT NULL,\
+  `Engagement_Status` varchar(255) DEFAULT NULL,\
+  `Sensitivity` varchar(255) DEFAULT NULL,\
+  `Translation_Type` varchar(255) DEFAULT NULL,\
+  `Translation_Goals` varchar(255) DEFAULT NULL,\
+  `Engagement_Function` varchar(255) DEFAULT NULL,\
+  `Project_Ended` date DEFAULT NULL,\
+  `Planned_Begin_Date` date DEFAULT NULL,\
+  `Planned_End_Date` date DEFAULT NULL,\
+  `Is_OBT_Engagement` varchar(255) DEFAULT NULL,\
+  `Is_Protected_Country` varchar(255) DEFAULT NULL,\
+  `pb_all_translation_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `date_last_reported` varchar(8) DEFAULT NULL,\
+  `last_date_reported` varchar(8) DEFAULT NULL,\
+  PRIMARY KEY (`pb_all_translation_id`)\
+) ENGINE=InnoDB AUTO_INCREMENT=33512 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.pb_language_data definition\
+\
+CREATE TABLE `pb_language_data` (\
+  `continent` text DEFAULT NULL,\
+  `country` text DEFAULT NULL,\
+  `countrycode` text DEFAULT NULL,\
+  `illuminationsregion` text DEFAULT NULL,\
+  `illuminationsgroupname` text DEFAULT NULL,\
+  `languagename` text DEFAULT NULL,\
+  `languagecode` text DEFAULT NULL,\
+  `issignlanguage` text DEFAULT NULL,\
+  `iswrittenlanguage` text DEFAULT NULL,\
+  `languageegids` text DEFAULT NULL,\
+  `languageegidsgroup` text DEFAULT NULL,\
+  `firstlanguageusers` double DEFAULT NULL,\
+  `firstlanguageusersgroup` text DEFAULT NULL,\
+  `isisorecognized` text DEFAULT NULL,\
+  `isprotectedcountry` tinyint(1) DEFAULT NULL,\
+  `completedscripture` text DEFAULT NULL,\
+  `latestpublicationyear` double DEFAULT NULL,\
+  `activetranslation` text DEFAULT NULL,\
+  `activelanguagedevelopment` text DEFAULT NULL,\
+  `activescriptureengagement` text DEFAULT NULL,\
+  `activeintent` text DEFAULT NULL,\
+  `activeobt` text DEFAULT NULL,\
+  `onthelist` text DEFAULT NULL,\
+  `allaccessgoalmet` text DEFAULT NULL,\
+  `allaccesspopulation` text DEFAULT NULL,\
+  `allaccessgoal` text DEFAULT NULL,\
+  `allaccessstatus` text DEFAULT NULL,\
+  `top100progress` text DEFAULT NULL,\
+  `top100revisionstatus` text DEFAULT NULL,\
+  `accessthroughsecondlanguage` text DEFAULT NULL,\
+  `secondlanguagescripturelevel` text DEFAULT NULL,\
+  `secondlanguagescripturepubyear` double DEFAULT NULL,\
+  `chaptergoal` bigint(20) DEFAULT NULL,\
+  `chapterstogoal` bigint(20) DEFAULT NULL,\
+  `chapterscompleted` bigint(20) DEFAULT NULL,\
+  `textchapterscompleted` bigint(20) DEFAULT NULL,\
+  `audiochapterscompleted` bigint(20) DEFAULT NULL,\
+  `videochapterscompleted` bigint(20) DEFAULT NULL,\
+  `unknownmodechapterscompleted` bigint(20) DEFAULT NULL,\
+  `pb_id` bigint(20) DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.pb_language_engagements definition\
+\
+CREATE TABLE `pb_language_engagements` (\
+  `languagename` text DEFAULT NULL,\
+  `iso_639_2` text DEFAULT NULL,\
+  `country` text DEFAULT NULL,\
+  `allaccessstatus` text DEFAULT NULL,\
+  `allaccessgoal` text DEFAULT NULL,\
+  `aag_elligible` text DEFAULT NULL,\
+  `has_uw_engagement` text DEFAULT NULL,\
+  `uw_project_status` text DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.portfolios definition\
+\
+CREATE TABLE `portfolios` (\
+  `portfolio_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `portfolio_name` varchar(100) NOT NULL,\
+  PRIMARY KEY (`portfolio_id`)\
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.programs definition\
+\
+CREATE TABLE `programs` (\
+  `program_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `portfolio_id` int(11) NOT NULL,\
+  `name` varchar(100) NOT NULL,\
+  `is_active` tinyint(1) DEFAULT NULL,\
+  `photo_url` longtext DEFAULT NULL,\
+  `program_tag` varchar(100) DEFAULT NULL,\
+  PRIMARY KEY (`program_id`),\
+  KEY `programs_portfolios_FK` (`portfolio_id`),\
+  CONSTRAINT `programs_portfolios_FK` FOREIGN KEY (`portfolio_id`) REFERENCES `portfolios` (`portfolio_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.programs_language_engagements definition\
+\
+CREATE TABLE `programs_language_engagements` (\
+  `language_engagement_id` int(11) NOT NULL,\
+  `program_id` int(11) NOT NULL,\
+  PRIMARY KEY (`language_engagement_id`,`program_id`),\
+  KEY `programs_language_engagements_programs_FK` (`program_id`),\
+  CONSTRAINT `programs_language_engagements_language_engagements_FK` FOREIGN KEY (`language_engagement_id`) REFERENCES `language_engagements` (`language_engagement_id`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `programs_language_engagements_programs_FK` FOREIGN KEY (`program_id`) REFERENCES `programs` (`program_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.resource_type_mapping definition\
+\
+CREATE TABLE `resource_type_mapping` (\
+  `resource_id` int(10) unsigned NOT NULL,\
+  `resource_type_id` int(10) unsigned NOT NULL,\
+  PRIMARY KEY (`resource_id`,`resource_type_id`),\
+  KEY `resource_type_mapping_sli_resource_type_FK` (`resource_type_id`),\
+  CONSTRAINT `resource_type_mapping_resources_FK` FOREIGN KEY (`resource_id`) REFERENCES `resources` (`resource_id`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `resource_type_mapping_sli_resource_type_FK` FOREIGN KEY (`resource_type_id`) REFERENCES `sli_resource_type` (`resource_type_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.resources definition\
+\
+CREATE TABLE `resources` (\
+  `resource_id` int(10) unsigned NOT NULL AUTO_INCREMENT,\
+  `resource_name` varchar(200) NOT NULL,\
+  `org_id` int(11) NOT NULL,\
+  PRIMARY KEY (`resource_id`),\
+  KEY `resources_organizations_FK` (`org_id`),\
+  CONSTRAINT `resources_organizations_FK` FOREIGN KEY (`org_id`) REFERENCES `organizations` (`org_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.sli_language_data definition\
+\
+CREATE TABLE `sli_language_data` (\
+  `sli_id` int(11) DEFAULT NULL,\
+  `bcp47` varchar(255) DEFAULT NULL,\
+  `language` varchar(255) DEFAULT NULL,\
+  `iso_629_2` varchar(255) DEFAULT NULL,\
+  `resource_level` int(11) DEFAULT NULL,\
+  `rl_rationale` varchar(1000) DEFAULT NULL,\
+  `inclusive_code` int(11) DEFAULT NULL,\
+  `language_script` varchar(4) DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.sli_resource_type definition\
+\
+CREATE TABLE `sli_resource_type` (\
+  `resource_type_id` int(10) unsigned NOT NULL AUTO_INCREMENT,\
+  `resource_type` varchar(100) NOT NULL,\
+  PRIMARY KEY (`resource_type_id`)\
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.tf_chapter_data definition\
+\
+CREATE TABLE `tf_chapter_data` (\
+  `TF_ref_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `TF_course` varchar(254) DEFAULT NULL,\
+  `Scripture_Association` varchar(254) DEFAULT NULL,\
+  `Class_num` int(11) DEFAULT NULL,\
+  `Bible_book_ref` varchar(254) DEFAULT NULL,\
+  `Book_Bible_Code` varchar(254) DEFAULT NULL,\
+  `Start_Chapter` int(11) DEFAULT NULL,\
+  `End_Chapter` int(11) DEFAULT NULL,\
+  `Chapter_count` int(11) DEFAULT NULL,\
+  `Verse_count` int(11) DEFAULT NULL,\
+  `Start_Verse` int(11) DEFAULT NULL,\
+  `End_Verse` int(11) DEFAULT NULL,\
+  `translated_verse_count` int(11) DEFAULT NULL,\
+  `week_completed_chapters` int(11) DEFAULT NULL,\
+  `week_partial_chapters` int(11) DEFAULT NULL,\
+  `course_completed_chapter` int(11) DEFAULT NULL,\
+  `course_partial_chapter` int(11) DEFAULT NULL,\
+  `curriculum_completed_chapter` int(11) DEFAULT NULL,\
+  `curriculum_partial_chapter` int(11) DEFAULT NULL,\
+  PRIMARY KEY (`TF_ref_id`)\
+) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.training_events definition\
+\
+CREATE TABLE `training_events` (\
+  `training_event_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `event_name` varchar(256) DEFAULT NULL,\
+  `zoom_in_person` varchar(555) DEFAULT NULL,\
+  `start_date` date DEFAULT NULL,\
+  `trip_duration_days` int(11) DEFAULT NULL,\
+  `training_event_hours` int(11) DEFAULT NULL,\
+  `training_category` varchar(555) DEFAULT NULL,\
+  `country_id` varchar(50) NOT NULL,\
+  `org_id` int(11) DEFAULT NULL,\
+  `program_id` int(11) DEFAULT NULL,\
+  `participants_present` int(11) DEFAULT NULL,\
+  `translator_participants_present` int(11) DEFAULT NULL,\
+  `trainer_participants_present` int(11) DEFAULT NULL,\
+  `leader_participants_present` int(11) DEFAULT NULL,\
+  `total_faciliators` int(11) DEFAULT NULL,\
+  `total_non_uw_staff` int(11) DEFAULT NULL,\
+  `non_uw_staff` varchar(555) DEFAULT NULL,\
+  `respective_org` varchar(555) DEFAULT NULL,\
+  `sls_involved` varchar(555) DEFAULT NULL,\
+  `sl_names` varchar(555) DEFAULT NULL,\
+  `countries_involved` varchar(555) DEFAULT NULL,\
+  `country_names` varchar(555) DEFAULT NULL,\
+  `training_man_hours` int(11) GENERATED ALWAYS AS (`training_event_hours` * `total_faciliators`) STORED,\
+  PRIMARY KEY (`training_event_id`),\
+  KEY `training_events_countries_FK` (`country_id`),\
+  KEY `training_events_organizations_FK` (`org_id`),\
+  KEY `training_events_programs_FK` (`program_id`),\
+  CONSTRAINT `training_events_countries_FK` FOREIGN KEY (`country_id`) REFERENCES `countries` (`alpha_3_code`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `training_events_organizations_FK` FOREIGN KEY (`org_id`) REFERENCES `organizations` (`org_id`) ON DELETE CASCADE ON UPDATE CASCADE,\
+  CONSTRAINT `training_events_programs_FK` FOREIGN KEY (`program_id`) REFERENCES `programs` (`program_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=197 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking`.tre_ols definition\
+\
+CREATE TABLE `tre_ols` (\
+  `language_name` text DEFAULT NULL,\
+  `language_code` text DEFAULT NULL,\
+  `OL_country` text DEFAULT NULL,\
+  `Ol_region` text DEFAULT NULL,\
+  `OL_continent` text DEFAULT NULL,\
+  `OL_first_lang_pop` double DEFAULT NULL,\
+  `SL_name` text DEFAULT NULL,\
+  `SL_code` text DEFAULT NULL,\
+  `resource_level` double DEFAULT NULL,\
+  `Connection_Score` double DEFAULT NULL,\
+  `alpha_3_code` text DEFAULT NULL,\
+  `country` text DEFAULT NULL,\
+  `country_id` text DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking`.tre_sl_countries definition\
+\
+CREATE TABLE `tre_sl_countries` (\
+  `major_language_id` text DEFAULT NULL,\
+  `country_id` text DEFAULT NULL,\
+  `alpha_3_code` text DEFAULT NULL,\
+  `country` text DEFAULT NULL,\
+  `region` text DEFAULT NULL,\
+  `language` text DEFAULT NULL,\
+  `iso_639_2` text DEFAULT NULL,\
+  `resource_level` text DEFAULT NULL,\
+  `bcp_47` text DEFAULT NULL,\
+  `total_first_lang_pop` double DEFAULT NULL\
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.uw_product_metadata definition\
+\
+CREATE TABLE `uw_product_metadata` (\
+  `metadata_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `translation_products_id` int(11) DEFAULT NULL,\
+  `communication_date` date DEFAULT NULL,\
+  `created_by` varchar(100) DEFAULT NULL,\
+  `note` longtext DEFAULT NULL,\
+  PRIMARY KEY (`metadata_id`),\
+  KEY `uw_product_metadata_uw_translation_products_FK` (`translation_products_id`),\
+  CONSTRAINT `uw_product_metadata_uw_translation_products_FK` FOREIGN KEY (`translation_products_id`) REFERENCES `uw_translation_products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\
+\
+-- `uw-data-tracking-stage`.uw_reps definition\
+\
+CREATE TABLE `uw_reps` (\
+  `uw_rep_id` int(11) NOT NULL AUTO_INCREMENT,\
+  `first_name` varchar(100) DEFAULT NULL,\
+  `last_name` varchar(100) DEFAULT NULL,\
+  `abbreviation` varchar(100) DEFAULT NULL,\
+  PRIMARY KEY (`uw_rep_id`)\
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;\
+\
+-- `uw-data-tracking-stage`.uw_translation_products definition\
+\
+CREATE TABLE `uw_translation_products` (\
+  `id` int(11) NOT NULL AUTO_INCREMENT,\
+  `source_language_code` text DEFAULT NULL,\
+  `resource_package` text DEFAULT NULL,\
+  `scripture_text_name` text DEFAULT NULL,\
+  `scriptural_association` text DEFAULT NULL,\
+  `translation_type` text DEFAULT NULL,\
+  `resource_format` text DEFAULT NULL,\
+  `start_date` date DEFAULT NULL,\
+  `published_date` date DEFAULT NULL,\
+  `product_status` text DEFAULT NULL,\
+  `language_engagement_id` int(11) NOT NULL,\
+  `pb_engagement` text DEFAULT NULL,\
+  `completed_date` date DEFAULT NULL,\
+  PRIMARY KEY (`id`),\
+  KEY `uw_translation_products_language_engagements_FK` (`language_engagement_id`),\
+  CONSTRAINT `uw_translation_products_language_engagements_FK` FOREIGN KEY (`language_engagement_id`) REFERENCES `language_engagements` (`language_engagement_id`) ON DELETE CASCADE ON UPDATE CASCADE\
+) ENGINE=InnoDB AUTO_INCREMENT=3113 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci WITH SYSTEM VERSIONING;}

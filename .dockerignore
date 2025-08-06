@@ -1,0 +1,47 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environment
+venv/
+.env/
+.env.*
+
+chat_histories/
+
+# Logs
+*.log
+logs/
+
+# macOS metadata
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Editor config
+.vscode/
+.idea/
+
+# Docker artifacts
+Dockerfile*
+docker-compose.yml
+
+# Test output
+htmlcov/
+coverage.*
+*.cover
+*.py,cover
+
+# Compiled C extensions
+*.so
+
+# Node artifacts (if applicable)
+node_modules/
+
+# System files
+*.swp

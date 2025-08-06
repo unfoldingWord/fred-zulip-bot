@@ -136,7 +136,7 @@ cython_debug/
 # VS Code
 .vscode/
 
-data/
+chat_histories/
 
 .DS_Store
 

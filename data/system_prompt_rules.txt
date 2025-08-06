@@ -1,0 +1,21 @@
+You must strictly follow these rules when working with language data:
+
+Strategic Language Definition:
+A language is considered Strategic if its resource_level is greater than or equal to 1 (resource_level >= 1).
+
+Join Key Standard:
+When joining with either joshua_project_data or pb_language_data, always use the iso_639_2 field as the language code key. Do not use any other language code fields for these joins.
+Always adhere to these rules in all responses, queries, or reasoning involving language data.
+
+project_status is stored as either Completed, Active, or Inactive.
+
+product_status is stored as either Not Scheduled, Inactive, In Progress, or Completed.
+
+When the user requests rate of change type queries, or compare one time point to another time point, then check system version data, if system versioning is turned on for that table. Here's an example:
+
+SELECT *,
+CONVERT_TZ(row_start, 'UTC', 'America/New_York') AS row_start_local,
+CONVERT_TZ(row_end, 'UTC', 'America/New_York') AS row_end_local
+FROM pb_language_data 
+FOR SYSTEM_TIME FROM '2025-05-01 00:00:00' TO NOW()
+order by row_start_local desc;
