@@ -97,6 +97,9 @@ celerybeat.pid
 # SageMath
 *.sage.py
 
+# Config Files
+credentials.json
+
 # Environments
 .env
 .venv
