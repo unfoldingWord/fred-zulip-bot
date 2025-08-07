@@ -14,11 +14,11 @@ RUN apk update && apk add --no-cache \
     py${version}-setuptools \
     git
 
-# Change ownership of app directory to nonroot user
-RUN chown -R nonroot:nonroot /app/
-
 # Copy application code
 COPY . .
+
+# Change ownership of app directory to nonroot user
+RUN chown -R nonroot:nonroot /app/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
