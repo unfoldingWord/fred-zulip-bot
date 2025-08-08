@@ -1,4 +1,5 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Response, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from config import config
@@ -159,6 +160,7 @@ class ZulipMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: ZulipMessage
+    token: str
 
 # Define what the server sends back
 class ChatResponse(BaseModel):
@@ -262,21 +264,30 @@ def process_user_message(message):
         )
 
     except Exception as e:
-        logger.info("Error: %s", e)
+        logger.error("Error: %s", e)
 
-@app.post("/chat", response_model=ChatResponse)
+@app.post("/chat")
 def chat(request: ChatRequest, background_tasks: BackgroundTasks):
+    # check authentication
+    if request.token != config.ZULIP_AUTH_TOKEN:
+        raise HTTPException(status_code=401, detail = "Unauthorized Request")
+
     # 1. Send immediate reply
     thinking_reply = "Fred is thinking..."
     background_tasks.add_task(process_user_message, request.message)
 
     # 2. Send the quick acknowledgment back to Zulip
-    send_zulip_message(
-        to=[request.message.sender_email],
-        msg_type=request.message.type,
-        subject=request.message.subject,  # Stream messages need subject
-        content=thinking_reply
-    )
+    try:
+        send_zulip_message(
+            to=[request.message.sender_email],
+            msg_type=request.message.type,
+            subject=request.message.subject,  # Stream messages need subject
+            content=thinking_reply
+        )
 
-    return ChatResponse(response="")
+    except Exception as e:
+        logger.error("Send Zulip Message Failed", exc_info=True)
+        raise HTTPException(status_code=500, detail = "Send Zulip Message Failed")
+
+    return JSONResponse(content={"response_not_required": True}, status_code=200)
 

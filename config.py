@@ -10,6 +10,7 @@ class Config(BaseSettings):
     DB_USER:str = Field(..., env="DB_USER")
     DB_PASSWORD:str = Field(..., env="DB_PASSWORD")
     GENAI_API_KEY:str = Field(..., env="GENAI_API_KEY")
+    ZULIP_AUTH_TOKEN:str = Field(..., env="ZULIP_AUTH_TOKEN")
 
     class Config:
         env_file = "./.venv/.env"
