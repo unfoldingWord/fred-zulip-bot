@@ -68,7 +68,7 @@ with open("./data/DDLs.rtf", "r") as f:
 with open("./data/system_prompt_rules.txt") as f:
     system_prompt_rules = f.read()
 
-app = FastAPI(docs_url = "/")
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Enable CORS if you're calling from a browser/frontend
 app.add_middleware(
