@@ -4,6 +4,11 @@ Fred is a FastAPI service that integrates a generative AI model with Zulip. It c
 
 ---
 
+## Usage
+To use fred-bot in Zulip, simply @fred-bot <some-message> and he will respond. First by saying "Fred is thinking..." then later with the actual response to the users message/query.
+
+---
+
 ## Features
 - Intent classification using Google Gemini models.
 - Read-only SQL generation with safety checks against destructive commands.
