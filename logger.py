@@ -2,6 +2,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
 
 # Create logs directory if it doesn't exist
 LOG_DIR = "logs"
@@ -20,6 +21,11 @@ handler.setFormatter(formatter)
 logger = logging.getLogger("AppLogger")
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
+
+# Add stream handler to print logs to console
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 # Avoid duplicate logs if imported multiple times
 logger.propagate = False
