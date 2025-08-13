@@ -183,10 +183,13 @@ def load_history(email: str):
         logger.info("chat history for %s is corrupted. starting fresh.", email)
     return []
 
+MAX_HISTORY_LENGTH = 20  # number of messages (user + model) to keep
+
 def save_history(email: str, history):
+    trimmed_history = history[-MAX_HISTORY_LENGTH:]
     path = get_user_history_path(email)
     with open(path, "w") as f:
-        json.dump(history, f, indent=2)
+        json.dump(trimmed_history, f, indent=2)
 
 
 def process_user_message(message):
