@@ -62,10 +62,10 @@ def is_safe_sql(query: str) -> bool:
     return True
 
 
-with open("./data/DDLs.rtf", "r") as f:
+with open("context/DDLs.rtf", "r") as f:
     database_context = f.read()
 
-with open("./data/system_prompt_rules.txt") as f:
+with open("context/system_prompt_rules.txt") as f:
     system_prompt_rules = f.read()
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -127,27 +127,27 @@ answer_prompt = (
 genai.configure(api_key=config.GENAI_API_KEY)
 
 intent_model = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
+    model_name="gemini-2.5-flash",
     system_instruction=intent_prompt
 )
 
 chatbot_model = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
+    model_name="gemini-2.5-flash",
     system_instruction=chatbot_prompt
 )
 
 other_model = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
+    model_name="gemini-2.5-flash",
     system_instruction=other_prompt
 )
 
 sql_model = genai.GenerativeModel(
-    model_name = "gemini-2.5-pro",
+    model_name = "gemini-2.5-flash",
     system_instruction = sql_prompt
 )
 
 answer_model = genai.GenerativeModel(
-    model_name = "gemini-2.5-pro",
+    model_name = "gemini-2.5-flash",
     system_instruction = answer_prompt
 )
 
