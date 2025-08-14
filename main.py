@@ -11,7 +11,7 @@ import os
 import json
 from logger import logger
 
-def send_zulip_message(to, msg_type, subject, content):
+def send_zulip_message(to, msg_type, subject, content, channel_name):
     data = {
         "type": msg_type,
         "to": to,
@@ -19,6 +19,7 @@ def send_zulip_message(to, msg_type, subject, content):
     }
     if msg_type == "stream":
         data["subject"] = subject
+        data["to"] = channel_name
 
     requests.post(
         f"{config.ZULIP_SITE}/api/v1/messages",
@@ -131,6 +132,7 @@ current_model = "gemini-2.5-pro"
 # Define what the client sends
 class ZulipMessage(BaseModel):
     content: str
+    display_recipient: str
     sender_email: str
     subject: str
     type: str
@@ -256,7 +258,8 @@ def process_user_message(message):
             to=[message.sender_email],
             msg_type=message.type,
             subject=message.subject,
-            content=response
+            content=response,
+            channel_name = message.display_recipient
         )
 
     except Exception as e:
@@ -278,7 +281,8 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks):
             to=[request.message.sender_email],
             msg_type=request.message.type,
             subject=request.message.subject,  # Stream messages need subject
-            content=thinking_reply
+            content=thinking_reply,
+            channel_name=request.message.display_recipient
         )
 
     except Exception as e:
