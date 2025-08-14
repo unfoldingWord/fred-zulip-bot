@@ -126,30 +126,7 @@ answer_prompt = (
 # Initialize genai client
 genai.configure(api_key=config.GENAI_API_KEY)
 
-intent_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    system_instruction=intent_prompt
-)
-
-chatbot_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    system_instruction=chatbot_prompt
-)
-
-other_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
-    system_instruction=other_prompt
-)
-
-sql_model = genai.GenerativeModel(
-    model_name = "gemini-2.5-flash",
-    system_instruction = sql_prompt
-)
-
-answer_model = genai.GenerativeModel(
-    model_name = "gemini-2.5-flash",
-    system_instruction = answer_prompt
-)
+current_model = "gemini-2.5-pro"
 
 # Define what the client sends
 class ZulipMessage(BaseModel):
@@ -191,6 +168,30 @@ def save_history(email: str, history):
     with open(path, "w") as f:
         json.dump(trimmed_history, f, indent=2)
 
+def ask_gemini(message, model_name: str, prompt: str, use_history: bool):
+    model = genai.GenerativeModel(
+        model_name=model_name,
+        system_instruction=prompt
+    )
+
+    try:
+        if use_history:
+            history = load_history(message.sender_email)
+            chat_session = model.start_chat(history=history)
+            reply = chat_session.send_message(message.content)
+            return reply
+        else:
+            reply = model.generate_content(message.content)
+            return reply
+    except Exception as e:
+        logger.error("gemini model %s failed", current_model)
+        if model_name == "gemini-2.5-pro":
+            ask_gemini(message, "gemini-2.5.flash", prompt, use_history)
+        else:
+            raise HTTPException(status_code=500, detail="Gemini model failed")
+
+
+
 
 def process_user_message(message):
     try:
@@ -199,28 +200,24 @@ def process_user_message(message):
         logger.info("%s sent message '%s'", message.sender_email, message.content)
 
         # Determine intent
-        intent_response = intent_model.generate_content(message.content)
+        intent_response = ask_gemini(message.content, current_model, intent_prompt, use_history=False)
         intent = intent_response.text.strip().lower()
 
         logger.info("Intent classified as: %s", intent)
 
         response = ""
 
-        if intent == "chatbot":
-            chatbot_session = chatbot_model.start_chat(history=history)
-            chatbot_reply = chatbot_session.send_message(message.content)
+        history.append({"role": "user", "parts": [message.content]})
 
-            history.append({"role": "user", "parts": [message.content]})
+        if intent == "chatbot":
+            chatbot_reply = ask_gemini(message.content, current_model, chatbot_prompt, use_history=True)
             history.append({"role": "model", "parts": [chatbot_reply.text]})
             save_history(message.sender_email, history)
 
             response = chatbot_reply.text
 
         elif intent == "other":
-            other_session = other_model.start_chat(history=history)
-            other_reply = other_session.send_message(message.content)
-
-            history.append({"role": "user", "parts": [message.content]})
+            other_reply = ask_gemini(message.content, current_model, other_prompt, use_history=True)
             history.append({"role": "model", "parts": [other_reply.text]})
             save_history(message.sender_email, history)
 
@@ -228,29 +225,25 @@ def process_user_message(message):
 
 
         elif intent == "database":
-            # Default case: treat as database query
-            sql_chat_session = sql_model.start_chat(history=history)
-            sql_message = sql_chat_session.send_message(message.content)
+            sql_message = ask_gemini(message.content, current_model, sql_prompt, use_history=True)
 
             logger.info("SQL generated: %s", sql_message.text)
 
-            history.append({"role": "user", "parts": [message.content]})
             history.append({"role": "model", "parts": [sql_message.text]})
 
             if not is_safe_sql(sql_message.text):
                 raise ValueError("Unsafe SQL query detected — blocked from execution.")
 
             database_data = submit_query(sql_message.text)
-
-            answer_chat_session = answer_model.start_chat(history=history)
+            history.append({"role": "model", "parts": [database_data]})
 
             answer_request = (
                 f"The SQL query returned {database_data}. "
                 "Answer the user's question using this data."
             )
-            answer_message = answer_chat_session.send_message(answer_request)
 
-            history.append({"role": "model", "parts": [database_data]})
+            answer_message = ask_gemini(answer_request, current_model, answer_prompt, use_history=True)
+
             history.append({"role": "model", "parts": [answer_message.text]})
 
             save_history(message.sender_email, history)
