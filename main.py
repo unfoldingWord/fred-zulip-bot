@@ -188,7 +188,7 @@ def ask_gemini(message, model_name: str, prompt: str, use_history: bool):
     except Exception as e:
         logger.error("gemini model %s failed", current_model)
         if model_name == "gemini-2.5-pro":
-            ask_gemini(message, "gemini-2.5.flash", prompt, use_history)
+            ask_gemini(message, "gemini-2.5-flash", prompt, use_history)
         else:
             raise HTTPException(status_code=500, detail="Gemini model failed")
 
