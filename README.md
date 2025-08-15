@@ -1,5 +1,6 @@
 # Fred Zulip Bot
 
+
 Fred is a FastAPI service that integrates a generative AI model with Zulip. It classifies user intent, generates safe read-only SQL queries against an unfoldingWord database, and posts natural-language answers back to Zulip.
 
 ---
