@@ -187,7 +187,7 @@ def ask_gemini(message, model_name: str, prompt: str, use_history: bool):
             reply = model.generate_content(message.content)
             return reply
     except Exception as e:
-        logger.error("gemini model %s failed", current_model)
+        logger.error("gemini model %s failed", model_name, exc_info=True)
         if model_name == "gemini-2.5-pro":
             ask_gemini(message, "gemini-2.5-flash", prompt, use_history)
         else:
