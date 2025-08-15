@@ -171,7 +171,7 @@ def save_history(email: str, history):
     with open(path, "w") as f:
         json.dump(trimmed_history, f, indent=2)
 
-def ask_gemini(message, model_name: str, prompt: str, use_history: bool):
+def ask_gemini(message: ZulipMessage, model_name: str, prompt: str, use_history: bool):
     model = genai.GenerativeModel(
         model_name=model_name,
         system_instruction=prompt
@@ -203,7 +203,7 @@ def process_user_message(message):
         logger.info("%s sent message '%s'", message.sender_email, message.content)
 
         # Determine intent
-        intent_response = ask_gemini(message.content, current_model, intent_prompt, use_history=False)
+        intent_response = ask_gemini(message, current_model, intent_prompt, use_history=False)
         intent = intent_response.text.strip().lower()
 
         logger.info("Intent classified as: %s", intent)
@@ -213,14 +213,14 @@ def process_user_message(message):
         history.append({"role": "user", "parts": [message.content]})
 
         if intent == "chatbot":
-            chatbot_reply = ask_gemini(message.content, current_model, chatbot_prompt, use_history=True)
+            chatbot_reply = ask_gemini(message, current_model, chatbot_prompt, use_history=True)
             history.append({"role": "model", "parts": [chatbot_reply.text]})
             save_history(message.sender_email, history)
 
             response = chatbot_reply.text
 
         elif intent == "other":
-            other_reply = ask_gemini(message.content, current_model, other_prompt, use_history=True)
+            other_reply = ask_gemini(message, current_model, other_prompt, use_history=True)
             history.append({"role": "model", "parts": [other_reply.text]})
             save_history(message.sender_email, history)
 
@@ -228,7 +228,7 @@ def process_user_message(message):
 
 
         elif intent == "database":
-            sql_message = ask_gemini(message.content, current_model, sql_prompt, use_history=True)
+            sql_message = ask_gemini(message, current_model, sql_prompt, use_history=True)
 
             logger.info("SQL generated: %s", sql_message.text)
 
@@ -240,9 +240,17 @@ def process_user_message(message):
             database_data = submit_query(sql_message.text)
             history.append({"role": "model", "parts": [database_data]})
 
-            answer_request = (
+            answer_content = (
                 f"The SQL query returned {database_data}. "
                 "Answer the user's question using this data."
+            )
+
+            answer_request = ZulipMessage(
+                content=answer_content,
+                display_recipient=message.display_recipient,
+                sender_email=message.sender_email,
+                subject=message.subject,
+                type=message.type
             )
 
             answer_message = ask_gemini(answer_request, current_model, answer_prompt, use_history=True)
