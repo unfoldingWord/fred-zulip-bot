@@ -202,6 +202,9 @@ def process_user_message(message):
 
         logger.info("%s sent message '%s'", message.sender_email, message.content)
 
+        history.append({"role": "user", "parts": [message.content]})
+        save_history(message.sender_email, history)
+
         # Determine intent
         intent_response = ask_gemini(message, current_model, intent_prompt, use_history=False)
         intent = intent_response.text.strip().lower()
@@ -210,7 +213,6 @@ def process_user_message(message):
 
         response = ""
 
-        history.append({"role": "user", "parts": [message.content]})
 
         if intent == "chatbot":
             chatbot_reply = ask_gemini(message, current_model, chatbot_prompt, use_history=True)
