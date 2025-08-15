@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from config import config
+from typing import Any
 import google.generativeai as genai
 import mysql.connector
 import requests
@@ -132,7 +133,7 @@ current_model = "gemini-2.5-pro"
 # Define what the client sends
 class ZulipMessage(BaseModel):
     content: str
-    display_recipient: str
+    display_recipient: Any
     sender_email: str
     subject: str
     type: str
