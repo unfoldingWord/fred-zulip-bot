@@ -172,24 +172,32 @@ def save_history(email: str, history):
         json.dump(trimmed_history, f, indent=2)
 
 def ask_gemini(message: ZulipMessage, model_name: str, prompt: str, use_history: bool):
-    model = genai.GenerativeModel(
-        model_name=model_name,
-        system_instruction=prompt
-    )
-
+    text_error = False
     try:
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            system_instruction=prompt
+        )
+
         if use_history:
             history = load_history(message.sender_email)
             chat_session = model.start_chat(history=history)
             reply = chat_session.send_message(message.content)
-            return reply
         else:
             reply = model.generate_content(message.content)
+
+        if reply.candidates and reply.candidates[0].content.parts:
             return reply
+        else:
+            text_error = True
+            raise Exception("no text returned")
+
     except Exception as e:
         logger.error("gemini model %s failed", model_name, exc_info=True)
-        if model_name == "gemini-2.5-pro":
-            ask_gemini(message, "gemini-2.5-flash", prompt, use_history)
+        if text_error:
+            return ask_gemini(message, "gemini-2.5-pro", prompt, use_history)
+        elif model_name == "gemini-2.5-pro":
+            return ask_gemini(message, "gemini-2.5-flash", prompt, use_history)
         else:
             raise HTTPException(status_code=500, detail="Gemini model failed")
 
