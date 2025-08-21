@@ -12,6 +12,17 @@ import os
 import json
 from logger import logger
 
+test_mode = False
+
+if test_mode:
+    zulip_bot_email = config.ZULIP_BOT_EMAIL_TEST
+    zulip_bot_token = config.ZULIP_BOT_TOKEN_TEST
+    zulip_auth_token = config.ZULIP_AUTH_TOKEN_TEST
+else:
+    zulip_bot_email = config.ZULIP_BOT_EMAIL
+    zulip_bot_token = config.ZULIP_BOT_TOKEN
+    zulip_auth_token = config.ZULIP_AUTH_TOKEN
+
 def send_zulip_message(to, msg_type, subject, content, channel_name):
     data = {
         "type": msg_type,
@@ -25,7 +36,7 @@ def send_zulip_message(to, msg_type, subject, content, channel_name):
     requests.post(
         f"{config.ZULIP_SITE}/api/v1/messages",
         data=data,
-        auth=(config.ZULIP_BOT_EMAIL, config.ZULIP_BOT_TOKEN)
+        auth=(zulip_bot_email, zulip_bot_token)
     )
 
 def submit_query(query):
@@ -287,7 +298,7 @@ def process_user_message(message):
 @app.post("/chat")
 def chat(request: ChatRequest, background_tasks: BackgroundTasks):
     # check authentication
-    if request.token != config.ZULIP_AUTH_TOKEN:
+    if request.token != zulip_auth_token:
         raise HTTPException(status_code=401, detail = "Unauthorized Request")
 
     # 1. Send immediate reply

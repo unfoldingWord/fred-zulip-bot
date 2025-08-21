@@ -1,15 +1,13 @@
-from mypy.typeops import false_only
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from typing import Optional
 
 class Config(BaseSettings):
 
-    test_mode = False
 
-    if test_mode:
-        ZULIP_BOT_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_BOT_TOKEN_TEST")
-        ZULIP_BOT_EMAIL_TEST: Optional[str] = Field(None, env="ZULIP_BOT_EMAIL_TEST")
-        ZULIP_AUTH_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_AUTH_TOKEN_TEST")
+    ZULIP_BOT_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_BOT_TOKEN_TEST")
+    ZULIP_BOT_EMAIL_TEST: Optional[str] = Field(None, env="ZULIP_BOT_EMAIL_TEST")
+    ZULIP_AUTH_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_AUTH_TOKEN_TEST")
 
     ZULIP_BOT_TOKEN: str = Field(..., env="ZULIP_BOT_TOKEN")
     ZULIP_BOT_EMAIL: str = Field(..., env="ZULIP_BOT_EMAIL")
