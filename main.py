@@ -40,26 +40,31 @@ def send_zulip_message(to, msg_type, subject, content, channel_name):
     )
 
 def submit_query(query):
-    conn = mysql.connector.connect(
-        host = config.DB_HOST,
-        port = 3306,
-        database = config.DB_NAME,
-        user = config.DB_USER,
-        password = config.DB_PASSWORD,
-        charset = 'utf8mb4',
-        collation = 'utf8mb4_unicode_ci'
-    )
+    try:
+        conn = mysql.connector.connect(
+            host = config.DB_HOST,
+            port = 3306,
+            database = config.DB_NAME,
+            user = config.DB_USER,
+            password = config.DB_PASSWORD,
+            charset = 'utf8mb4',
+            collation = 'utf8mb4_unicode_ci'
+        )
 
-    db = conn.cursor()
-    db.execute(query)
-    rows = db.fetchall()
-    result = ""
-    for row in rows:
-        result += str(row) + ", "
+        db = conn.cursor()
+        db.execute(query)
+        rows = db.fetchall()
+        result = ""
+        for row in rows:
+            result += str(row) + ", "
 
-    db.close()
-    conn.close()
-    return result
+        db.close()
+        conn.close()
+        return result
+    except Exception as e:
+        logger.error("invalid sql generated", exc_info=True)
+        return "salvage"
+
 
 FORBIDDEN_SQL_KEYWORDS = [
     "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "REPLACE", "CREATE"
@@ -259,12 +264,20 @@ def process_user_message(message):
                 raise ValueError("Unsafe SQL query detected — blocked from execution.")
 
             database_data = submit_query(sql_message.text)
-            history.append({"role": "model", "parts": [database_data]})
 
-            answer_content = (
-                f"The SQL query returned {database_data}. "
-                "Answer the user's question using this data."
-            )
+            if database_data != "salvage":
+
+                history.append({"role": "model", "parts": [database_data]})
+
+                answer_content = (
+                    f"The SQL query returned {database_data}. "
+                    "Answer the user's question using this data."
+                )
+            else:
+                answer_content = (
+                    "A different message instead of SQL was generated. Use this"
+                    f"message to answer the user's question. Message: {database_data}"
+                )
 
             answer_request = ZulipMessage(
                 content=answer_content,
