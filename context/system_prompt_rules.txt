@@ -18,6 +18,9 @@ project_status is stored as either Completed, Active, or Inactive.
 
 product_status is stored as either Not Scheduled, Inactive, In Progress, or Completed.
 
+in uw_translation_products, resource_package contains the type of package the product is, and scriptural_association
+contains the actual name of the book for that product.
+
 When the user requests rate of change type queries, or compares one time point to another time point, then check system version data, if system versioning is turned on for that table. Here's an example:
 
 SELECT *,
