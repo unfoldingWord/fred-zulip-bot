@@ -12,6 +12,7 @@ import os
 import json
 from logger import logger
 
+# Toggle test mode — switches between test credentials and production credentials
 test_mode = False
 
 if test_mode:
@@ -23,13 +24,14 @@ else:
     zulip_bot_token = config.ZULIP_BOT_TOKEN
     zulip_auth_token = config.ZULIP_AUTH_TOKEN
 
+# Sends a message to Zulip (either private or stream)
 def send_zulip_message(to, msg_type, subject, content, channel_name):
     data = {
         "type": msg_type,
         "to": to,
         "content": content
     }
-    if msg_type == "stream":
+    if msg_type == "stream": # Stream messages require subject + stream name
         data["subject"] = subject
         data["to"] = channel_name
 
@@ -39,6 +41,7 @@ def send_zulip_message(to, msg_type, subject, content, channel_name):
         auth=(zulip_bot_email, zulip_bot_token)
     )
 
+# Executes a SQL query against the database and returns results
 def submit_query(query):
     try:
         conn = mysql.connector.connect(
@@ -62,14 +65,16 @@ def submit_query(query):
         conn.close()
         return result
     except Exception as e:
+        # Returns value for bot to salvage message on error
         logger.error("invalid sql generated", exc_info=True)
         return "salvage"
 
-
+# Disallowed SQL keywords to prevent unsafe operations
 FORBIDDEN_SQL_KEYWORDS = [
     "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "REPLACE", "CREATE"
 ]
 
+# Checks if SQL query is safe (only read operations allowed)
 def is_safe_sql(query: str) -> bool:
     cleaned_query = re.sub(r"\s+", " ", query).strip().upper()
 
@@ -80,12 +85,15 @@ def is_safe_sql(query: str) -> bool:
     return True
 
 
+# Load database schema (DDL statements) to provide context for AI SQL generation
 with open("context/DDLs.rtf", "r") as f:
     database_context = f.read()
 
+# Load additional rules for how SQL should be generated
 with open("context/system_prompt_rules.txt") as f:
     system_prompt_rules = f.read()
 
+# Initialize FastAPI app (disables auto docs for security)
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Enable CORS if you're calling from a browser/frontend
@@ -96,6 +104,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prompt used to classify user intent
 intent_prompt = (
     "You are an intent classifier. A user has sent a message."
     "Your task is to classify their intent into one of the following categories:\n"
@@ -105,6 +114,7 @@ intent_prompt = (
     "Respond ONLY with one of the following words: database, chatbot, other.\n"
 )
 
+# Prompt for chatbot-related questions (about Fred itself)
 chatbot_prompt = (
     "You are Fred, an AI-powered assistant integrated with Zulip. The database you are an interface for has a lot"
     "of information relating to unfoldingWord’s work in Bible translation. Fred generates safe, read-only SQL"
@@ -115,6 +125,7 @@ chatbot_prompt = (
     "Answer clearly and briefly, as a helpful assistant would. Don't generate SQL or refer to specific database contents."
 )
 
+# Prompt for unsupported questions
 other_prompt = (
     "You are Fred, an AI-powered assistant integrated with Zulip. The database you are an interface for has a lot"
     "of information relating to unfoldingWord’s work in Bible translation. Fred generates safe, read-only SQL"
@@ -125,6 +136,7 @@ other_prompt = (
     "to the user that you can't help them with that, and redirect them by informing them of things you can do."
 )
 
+# Prompt for SQL generation — strict rules enforced
 sql_prompt = (
     "You are an SQL assistant.You will generate SQL queries based on the the user's request and the database information that was given to you."
     "Only return the SQL query — no explanation, no Markdown, no code block formatting."
@@ -135,6 +147,7 @@ sql_prompt = (
 
 )
 
+# Prompt for summarizing SQL results into natural language
 answer_prompt = (
     "You are a data summarizer. The user asked a question and you've been given the raw SQL result."
     "Based on that result, write a clear and concise natural-language answer."
@@ -146,7 +159,7 @@ genai.configure(api_key=config.GENAI_API_KEY)
 
 current_model = "gemini-2.5-pro"
 
-# Define what the client sends
+# Pydantic model for Zulip message
 class ZulipMessage(BaseModel):
     content: str
     display_recipient: Any
@@ -154,21 +167,25 @@ class ZulipMessage(BaseModel):
     subject: str
     type: str
 
+# Incoming request wrapper (includes Zulip message + auth token)
 class ChatRequest(BaseModel):
     message: ZulipMessage
     token: str
 
-# Define what the server sends back
+# Outgoing response structure
 class ChatResponse(BaseModel):
     response: str
 
+# Store chat history per user
 CHAT_HISTORY_DIR = "./data/chat_histories"
 os.makedirs(CHAT_HISTORY_DIR, exist_ok=True)
 
+# Map user email to safe filename
 def get_user_history_path(email: str) -> str:
     safe_email = email.replace("@", "_at_").replace(".", "_dot_")
     return os.path.join(CHAT_HISTORY_DIR, f"{safe_email}.json")
 
+# Load chat history
 def load_history(email: str):
     path = get_user_history_path(email)
     try:
@@ -179,14 +196,17 @@ def load_history(email: str):
         logger.info("chat history for %s is corrupted. starting fresh.", email)
     return []
 
-MAX_HISTORY_LENGTH = 20  # number of messages (user + model) to keep
+# Limit history size for memory efficiency
+MAX_HISTORY_LENGTH = 20
 
+# Save chat history
 def save_history(email: str, history):
     trimmed_history = history[-MAX_HISTORY_LENGTH:]
     path = get_user_history_path(email)
     with open(path, "w") as f:
         json.dump(trimmed_history, f, indent=2)
 
+# Wrapper for asking Gemini model
 def ask_gemini(message: ZulipMessage, model_name: str, prompt: str, use_history: bool):
     text_error = False
     try:
@@ -195,11 +215,11 @@ def ask_gemini(message: ZulipMessage, model_name: str, prompt: str, use_history:
             system_instruction=prompt
         )
 
-        if use_history:
+        if use_history: # Chat mode with history
             history = load_history(message.sender_email)
             chat_session = model.start_chat(history=history)
             reply = chat_session.send_message(message.content)
-        else:
+        else: # One-shot request
             reply = model.generate_content(message.content)
 
         if reply.candidates and reply.candidates[0].content.parts:
@@ -219,13 +239,14 @@ def ask_gemini(message: ZulipMessage, model_name: str, prompt: str, use_history:
 
 
 
-
+# Main logic for handling user messages
 def process_user_message(message):
     try:
         history = load_history(message.sender_email)
 
         logger.info("%s sent message '%s'", message.sender_email, message.content)
 
+        # Save user message to history
         history.append({"role": "user", "parts": [message.content]})
         save_history(message.sender_email, history)
 
@@ -237,7 +258,7 @@ def process_user_message(message):
 
         response = ""
 
-
+        # If user asked about the chatbot itself
         if intent == "chatbot":
             chatbot_reply = ask_gemini(message, current_model, chatbot_prompt, use_history=True)
             history.append({"role": "model", "parts": [chatbot_reply.text]})
@@ -245,6 +266,7 @@ def process_user_message(message):
 
             response = chatbot_reply.text
 
+        # If user asked an unsupported question
         elif intent == "other":
             other_reply = ask_gemini(message, current_model, other_prompt, use_history=True)
             history.append({"role": "model", "parts": [other_reply.text]})
@@ -252,7 +274,7 @@ def process_user_message(message):
 
             response = other_reply.text
 
-
+        # If user wants to query database
         elif intent == "database":
             sql_message = ask_gemini(message, current_model, sql_prompt, use_history=True)
 
@@ -260,11 +282,14 @@ def process_user_message(message):
 
             history.append({"role": "model", "parts": [sql_message.text]})
 
+            # Ensure query is safe
             if not is_safe_sql(sql_message.text):
                 raise ValueError("Unsafe SQL query detected — blocked from execution.")
 
+            # Run query
             database_data = submit_query(sql_message.text)
 
+            # Salvage message if invalid sql generated
             if database_data != "salvage":
 
                 history.append({"role": "model", "parts": [database_data]})
@@ -279,6 +304,7 @@ def process_user_message(message):
                     f"message to answer the user's question. Message: {database_data}"
                 )
 
+            # Ask Gemini to turn raw SQL results into natural-language answer
             answer_request = ZulipMessage(
                 content=answer_content,
                 display_recipient=message.display_recipient,
@@ -297,6 +323,7 @@ def process_user_message(message):
 
         logger.info("Fred response: %s", response)
 
+        # Send response back to Zulip user
         send_zulip_message(
             to=[message.sender_email],
             msg_type=message.type,
@@ -308,17 +335,18 @@ def process_user_message(message):
     except Exception as e:
         logger.error("Error: %s", e)
 
+# FastAPI endpoint to handle incoming Zulip messages
 @app.post("/chat")
 def chat(request: ChatRequest, background_tasks: BackgroundTasks):
-    # check authentication
+    # Verify authentication
     if request.token != zulip_auth_token:
         raise HTTPException(status_code=401, detail = "Unauthorized Request")
 
-    # 1. Send immediate reply
+    # Add user message to background process
     thinking_reply = "Fred is thinking..."
     background_tasks.add_task(process_user_message, request.message)
 
-    # 2. Send the quick acknowledgment back to Zulip
+    # Send immediate temp reply
     try:
         send_zulip_message(
             to=[request.message.sender_email],
@@ -332,5 +360,6 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks):
         logger.error("Send Zulip Message Failed", exc_info=True)
         raise HTTPException(status_code=500, detail = "Send Zulip Message Failed")
 
+    # Return response to Zulip server (not the user)
     return JSONResponse(content={"response_not_required": True}, status_code=200)
 

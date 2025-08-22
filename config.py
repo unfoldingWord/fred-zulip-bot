@@ -4,11 +4,12 @@ from typing import Optional
 
 class Config(BaseSettings):
 
-
+    # Test variables (optional)
     ZULIP_BOT_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_BOT_TOKEN_TEST")
     ZULIP_BOT_EMAIL_TEST: Optional[str] = Field(None, env="ZULIP_BOT_EMAIL_TEST")
     ZULIP_AUTH_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_AUTH_TOKEN_TEST")
 
+    # Required variables
     ZULIP_BOT_TOKEN: str = Field(..., env="ZULIP_BOT_TOKEN")
     ZULIP_BOT_EMAIL: str = Field(..., env="ZULIP_BOT_EMAIL")
     ZULIP_SITE:str = Field(..., env="ZULIP_SITE")
