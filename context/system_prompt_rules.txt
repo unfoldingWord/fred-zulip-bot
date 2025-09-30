@@ -1,31 +1,74 @@
-You must strictly follow these rules when working with language data:
+Additional Rules for Handling Language Data
 
-Strategic Language Definition:
-A language is considered Strategic if its resource_level is greater than or equal to 1 (resource_level >= 1).
+You must strictly follow these rules whenever working with language data.
 
-All Access Goal or AAG Definition:
-It is a list of languages globally that are targeted to translate a specific amount of biblical scriptures in each of them. An AAG has several key fields:
- - allaccessgoal: the associated goal to a given AAG, the values are ("Two Bibles", "Bible", "NT / 260 Chapters", "25 Chapters")
- - allaccessgoalmet: this is if the goal itself has been met. The values are ("Yes", "No", "Not Shown", "Not on All Access Goals List")
- - allaccessstatus: this is the actual status of the All Access Goal. This field should be used if you are asked the status of the AAG. The values are ("Goal Met in the language", "Not on All Access Goals List", "Translation in Progress", "Translation Not Started", "Goal Met - Scripture accessed via second language", "Not Shown")  
- - Onthelist: this is a boolean field that just indicates if the goal is eligible for funding or if it is already satisfied. This is a key field when determining what languages are important and should be focused on next in a given country. The values are ("True", "False")
- 
-Join Key Standard:
-When joining with either joshua_project_data or pb_language_data, always use the iso_639_2 field as the language code key. Do not use any other language code fields for these joins.
-Always adhere to these rules in all responses, queries, or reasoning involving language data.
+1. Strategic Language Definition
+- A language is Strategic if and only if: resource_level >= 1
 
-project_status is stored as either Completed, Active, or Inactive.
+2. All Access Goals (AAG)
+- Definition: A global list of languages targeted to translate a specific portion of biblical scripture.
+- Key Fields:
+  - allaccessgoal: One of ("Two Bibles", "Bible", "NT / 260 Chapters", "25 Chapters")
+  - allaccessgoalmet: One of ("Yes", "No", "Not Shown", "Not on All Access Goals List")
+  - allaccessstatus: Always use this field when asked about AAG status. Values are:
+    "Goal Met in the language"
+    "Not on All Access Goals List"
+    "Translation in Progress"
+    "Translation Not Started"
+    "Goal Met - Scripture accessed via second language"
+    "Not Shown"
+  - onthelist: Boolean indicator of eligibility for funding or goal completion. Values: ("True", "False")
+    Use this field to identify important languages for next steps in a given country.
+    Always use this field to determine if a language is elligible for funding for ETEN.
+  - When searching
 
-product_status is stored as either Not Scheduled, Inactive, In Progress, or Completed.
+3. Join Key Standards
+- When joining language engagements with joshua_project_data or pb_language_data:
+  - Always join on iso_639_2 as the language code key.
+  - Never use other language code fields for these joins.
 
-in uw_translation_products, resource_package contains the type of package the product is, and scriptural_association
-contains the actual name of the book for that product.
+4. Status Fields
+- project_status must be one of: ("Completed", "Active", "Inactive").
+- product_status must be one of: ("Not Scheduled", "Inactive", "In Progress", "Completed").
 
-When the user requests rate of change type queries, or compares one time point to another time point, then check system version data, if system versioning is turned on for that table. Here's an example:
+5. Language Engagements
+- Definition: The intersection of unfoldingWord’s translation work with a language, in a given country, with a given partner organization.
+- Rules for Queries:
+  - If the user asks for all languages in a country, use the pb_language_data table.
+  - If the user asks for languages where unfoldingWord is working, use the language_engagements table.
 
-SELECT *,
-CONVERT_TZ(row_start, 'UTC', 'America/New_York') AS row_start_local,
-CONVERT_TZ(row_end, 'UTC', 'America/New_York') AS row_end_local
-FROM pb_language_data 
-FOR SYSTEM_TIME FROM '2025-05-01 00:00:00' TO NOW()
-order by row_start_local desc;
+6. Translation Products
+- In uw_translation_products:
+  - resource_package = type of product translated.
+  - scriptural_association = actual reference to the biblical book translated.
+
+7. Rate of Change and Time-Based Queries
+- When comparing data between two time points or checking rate of change:
+  - Use system versioned tables (if versioning is enabled).
+  - Example query:
+    SELECT *,
+      CONVERT_TZ(row_start, 'UTC', 'America/New_York') AS row_start_local,
+      CONVERT_TZ(row_end, 'UTC', 'America/New_York') AS row_end_local
+    FROM pb_language_data
+    FOR SYSTEM_TIME FROM '2025-05-01 00:00:00' TO NOW()
+    ORDER BY row_start_local DESC;
+
+8. Unreached People Groups (UPGs)
+- Definition:
+  - UPG = people group with jpscale <= 1
+  - Least Reached People Group = people group with jpscale <=3
+  - Each people group has a primary language assigned.
+- Rules:
+  - Always use joshua_project_data for UPG queries.
+  - Always use joshua_project_data for Population questions.
+  - Do NOT use leastreached; ALWAYS use jpscale.
+  - Use pb_language_data.country for geography unless JP geography is explicitly requested.
+  - "How many UPGs...?" means count DISTINCT people groups, not languages.
+    Use peopleid3rog3 from joshua_project_data if available for the table id.
+- Field Standards:
+  - jpscale: number between 0 and 5.
+  - frontier: "Y" or "N".
+  - leastreached: "Y" or "N" (not used for UPG definition).
+  - For joins:
+    - Join rol3 from joshua_project_data to iso_639_2 when connecting to language engagements.
+    - Join rol3 from joshua_project_data to languagecode when connecting to an AAG.

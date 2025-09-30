@@ -1,0 +1,32 @@
+You must strictly follow these rules when working with language data:
+
+Strategic Language Definition:
+A language is considered Strategic if its resource_level is greater than or equal to 1 (resource_level >= 1).
+
+All Access Goal or AAG Definition:
+It is a list of languages globally that are targeted to translate a specific amount of biblical scriptures in each of them. An AAG has several key fields:
+ - allaccessgoal: the associated goal to a given AAG, the values are ("Two Bibles", "Bible", "NT / 260 Chapters", "25 Chapters")
+ - allaccessgoalmet: this is if the goal itself has been met. The values are ("Yes", "No", "Not Shown", "Not on All Access Goals List")
+ - allaccessstatus: this is the actual status of the All Access Goal. This field should be used if you are asked the status of the AAG. The values are ("Goal Met in the language", "Not on All Access Goals List", "Translation in Progress", "Translation Not Started", "Goal Met - Scripture accessed via second language", "Not Shown")  
+ - Onthelist: this is a boolean field that just indicates if the goal is eligible for funding or if it is already satisfied. This is a key field when determining what languages are important and should be focused on next in a given country. The values are ("True", "False")
+ 
+Join Key Standard:
+When joining with either joshua_project_data or pb_language_data, always use the iso_639_2 field as the language code key. Do not use any other language code fields for these joins.
+Always adhere to these rules in all responses, queries, or reasoning involving language data.
+
+project_status is stored as either Completed, Active, or Inactive.
+
+product_status is stored as either Not Scheduled, Inactive, In Progress, or Completed.
+
+Language engagements are the intersection of unfoldingWord's translation work with a language, in a given country, with a given partner organization, either from the ietf language list or from progress bible. When the User is asking for a list of languages in a given country, use the pb_language_data table. If they are asking for languages where uW or unfoldingWord is working, then use the language engagements.
+
+In uw_translation_products, resource_package contains what type of product is translated, and scriptural_association contains the actual reference to the book in the Bible that is translated for that product.
+
+When the user requests rate of change type queries, or compares one time point to another time point, then check system version data, if system versioning is turned on for that table. Here's an example:
+
+SELECT *,
+CONVERT_TZ(row_start, 'UTC', 'America/New_York') AS row_start_local,
+CONVERT_TZ(row_end, 'UTC', 'America/New_York') AS row_end_local
+FROM pb_language_data 
+FOR SYSTEM_TIME FROM '2025-05-01 00:00:00' TO NOW()
+order by row_start_local desc;

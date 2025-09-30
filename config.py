@@ -9,6 +9,8 @@ class Config(BaseSettings):
     ZULIP_BOT_EMAIL_TEST: Optional[str] = Field(None, env="ZULIP_BOT_EMAIL_TEST")
     ZULIP_AUTH_TOKEN_TEST: Optional[str] = Field(None, env="ZULIP_AUTH_TOKEN_TEST")
 
+    TEST_MODE: Optional[bool] = Field(False, env="TEST_MODE")
+
     # Required variables
     ZULIP_BOT_TOKEN: str = Field(..., env="ZULIP_BOT_TOKEN")
     ZULIP_BOT_EMAIL: str = Field(..., env="ZULIP_BOT_EMAIL")
@@ -21,6 +23,6 @@ class Config(BaseSettings):
     ZULIP_AUTH_TOKEN:str = Field(..., env="ZULIP_AUTH_TOKEN")
 
     class Config:
-        env_file = "./.venv/.env"
+        env_file = "./.env"
 
 config = Config()

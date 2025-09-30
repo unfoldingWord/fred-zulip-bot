@@ -12,10 +12,8 @@ import os
 import json
 from logger import logger
 
-# Toggle test mode — switches between test credentials and production credentials
-test_mode = False
 
-if test_mode:
+if config.TEST_MODE:
     zulip_bot_email = config.ZULIP_BOT_EMAIL_TEST
     zulip_bot_token = config.ZULIP_BOT_TOKEN_TEST
     zulip_auth_token = config.ZULIP_AUTH_TOKEN_TEST
@@ -151,7 +149,8 @@ sql_prompt = (
 answer_prompt = (
     "You are a data summarizer. The user asked a question and you've been given the raw SQL result."
     "Based on that result, write a clear and concise natural-language answer."
-    "Make sure to restate the user's question in the answer."
+    "Make sure to restate the user's question in the answer. If asked about Population, cite the"
+    "datasource either as Joshua Project or Progress Bible based on the SQL table used."
 )
 
 # Initialize genai client
@@ -343,7 +342,7 @@ def chat(request: ChatRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=401, detail = "Unauthorized Request")
 
     # Add user message to background process
-    thinking_reply = "Fred is thinking..."
+    thinking_reply = "One moment, generating response..."
     background_tasks.add_task(process_user_message, request.message)
 
     # Send immediate temp reply
