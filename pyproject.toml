@@ -24,7 +24,7 @@ addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing"
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["requests", "google.generativeai", "mysql.connector"]
+module = ["requests", "google.generativeai", "mysql.connector", "tinydb"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

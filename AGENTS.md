@@ -151,6 +151,9 @@ tests/
 - Centralize in `core/config.py` using `pydantic-settings`.
 - Load from env / `.env`. Never read secrets from code defaults.
 - All external clients (`ZulipClient`, `MySqlClient`, LLM) receive config via DI.
+- History storage defaults to TinyDB (`HISTORY_BACKEND=tinydb`); switch to filesystem with
+  `HISTORY_BACKEND=files`. Configure paths via `HISTORY_DB_PATH` / `HISTORY_FILES_DIR` and keep
+  `HISTORY_MAX_LENGTH` consistent with migrations.
 
 ---
 
