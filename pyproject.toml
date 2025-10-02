@@ -1,0 +1,24 @@
+[project]
+name = "fred-zulip-bot"
+requires-python = ">=3.13"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "PGH", "RUF"]
+ignore = ["E203", "E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing"
+testpaths = ["tests"]
