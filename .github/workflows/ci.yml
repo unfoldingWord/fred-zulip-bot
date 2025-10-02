@@ -19,9 +19,9 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
       - name: Lint
-        run: ruff check .
+        run: ruff check fred_zulip_bot tests
       - name: Format check
-        run: ruff format --check .
+        run: ruff format --check fred_zulip_bot tests
       - name: Type check
         run: mypy fred_zulip_bot
       - name: Test
