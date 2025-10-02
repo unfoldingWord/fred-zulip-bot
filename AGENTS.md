@@ -12,7 +12,10 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
 - **Tests:** `pytest` + coverage gate (start at **70%**, ratchet up over time).
 - **Pre-commit:** required locally and in CI (`ruff`, `mypy`, `pytest`).
 - **Secrets:** No secrets in code. Use env / `.env` with `pydantic-settings`.
-- **Commit Author:** Use **Codex Assistant** for bot-authored commits.
+- **Commit Author:** Use **Codex Assistant** for bot-authored commits — **non-negotiable**.
+- **Local Checks Before Every Commit (non-negotiable):** run `ruff check fred_zulip_bot tests`,
+  `ruff format --check fred_zulip_bot tests`, `mypy fred_zulip_bot`, and `pytest`. Pre-commit hooks
+  will fail if you forget, but you must run them manually first.
 - **Messages:** **Never** commit with an empty description—subject **and** body are required.
 
 ---
