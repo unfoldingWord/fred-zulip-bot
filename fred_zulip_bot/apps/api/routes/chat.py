@@ -2,20 +2,31 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, FastAPI
+from typing import TYPE_CHECKING, cast
+
+from fastapi import APIRouter, BackgroundTasks, FastAPI, Request
 
 from fred_zulip_bot.core.models import ChatRequest, ChatResponse
+
+if TYPE_CHECKING:
+    from fred_zulip_bot.services.chat_service import ChatService
 
 router = APIRouter()
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks) -> ChatResponse:
-    """Forward chat requests to the legacy handler until services are extracted."""
+def chat_endpoint(
+    request: ChatRequest,
+    background_tasks: BackgroundTasks,
+    http_request: Request,
+) -> ChatResponse:
+    """Forward chat requests to the chat service."""
 
-    from fred_zulip_bot.legacy_app import handle_chat_request
-
-    return handle_chat_request(request, background_tasks)
+    chat_service = cast(
+        "ChatService",
+        http_request.app.state.services["chat_service"],
+    )
+    return chat_service.handle_chat_request(request, background_tasks)
 
 
 def register_chat_routes(app: FastAPI) -> None:
