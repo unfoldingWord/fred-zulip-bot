@@ -25,6 +25,14 @@ DEFAULT_FALLBACK_MESSAGE = (
 _SQL_PREPROCESS_HISTORY_LIMIT = 6
 _SQL_PREPROCESS_LOG_SNIPPET_LENGTH = 240
 
+_PROGRESS_INITIAL = "Thanks for your patience - I'm reviewing your request now."
+_PROGRESS_CLASSIFY = "Figuring out the best way to help..."
+_PROGRESS_QUERY = "Checking the database for the details you asked about..."
+_PROGRESS_SUMMARY = "I have the data - summarizing it for you now."
+_PROGRESS_CHATBOT = "Drafting a reply about how I work..."
+_PROGRESS_UNSUPPORTED = "Working on a helpful explanation since I can't do that directly."
+_PROGRESS_UNSAFE = "That request looked unsafe, so I'm sending a fallback instead."
+
 
 class ChatService:
     """Handle chat requests by coordinating adapters and LLM prompts."""
@@ -73,7 +81,7 @@ class ChatService:
                 to=[request.message.sender_email],
                 msg_type=request.message.type,
                 subject=request.message.subject,
-                content="One moment, generating response...",
+                content="Got it - I'll keep you posted as I work on this.",
                 channel_name=request.message.display_recipient,
             )
         except Exception:
@@ -103,6 +111,7 @@ class ChatService:
             self._logger.info("%s sent message '%s'", message.sender_email, message.content)
 
             self._record_user_message(message, history)
+            self._send_progress_update(message, _PROGRESS_INITIAL)
 
             if self._enable_langgraph:
                 response_text = self._run_langgraph_flow(request, history)
@@ -186,13 +195,15 @@ class ChatService:
     def classify_intent(self, message: ZulipMessage) -> IntentType:
         """Determine the user intent using the intent service."""
 
-        return intent_service.classify_intent(
+        intent = intent_service.classify_intent(
             lambda prompt, use_history: self._ask_model(
                 message,
                 prompt,
                 use_history,
             )
         )
+        self._send_progress_update(message, _PROGRESS_CLASSIFY)
+        return intent
 
     def converse_with_fred_bot(
         self,
@@ -201,6 +212,7 @@ class ChatService:
     ) -> str:
         """Generate a chatbot-style response."""
 
+        self._send_progress_update(message, _PROGRESS_CHATBOT)
         chatbot_text = self._ask_model_text(
             message,
             intent_service.CHATBOT_PROMPT,
@@ -216,6 +228,7 @@ class ChatService:
     ) -> str:
         """Generate a response for unsupported requests."""
 
+        self._send_progress_update(message, _PROGRESS_UNSUPPORTED)
         other_text = self._ask_model_text(
             message,
             intent_service.OTHER_PROMPT,
@@ -231,6 +244,7 @@ class ChatService:
     ) -> tuple[str, str, str]:
         """Generate SQL, execute it, and summarize the result."""
 
+        self._send_progress_update(message, _PROGRESS_QUERY)
         rewritten_message_text = self._preprocess_for_sql_transform(message, history)
         sql_request_message = message.model_copy(update={"content": rewritten_message_text})
         sql_payload = self._ask_model_json(
@@ -249,12 +263,14 @@ class ChatService:
         is_safe_sql = self._sql_service.is_safe_sql(sql_text)
         if not is_safe_sql:
             self._logger.info("Unsafe SQL blocked; sending friendly fallback")
+            self._send_progress_update(message, _PROGRESS_UNSAFE)
             friendly_message = DEFAULT_FALLBACK_MESSAGE
             history.append({"role": "model", "parts": [friendly_message]})
             self._history_repo.save(message.sender_email, history)
             return friendly_message, sql_text, "salvage"
 
         database_data = self._mysql_client.select(sql_text)
+        self._send_progress_update(message, _PROGRESS_SUMMARY)
 
         if database_data != "salvage":
             self._logger.info("SQL result captured rows=%s", database_data[:200])
@@ -285,6 +301,18 @@ class ChatService:
         self._history_repo.save(message.sender_email, history)
 
         return answer_text, sql_text, database_data
+
+    def _send_progress_update(self, message: ZulipMessage, content: str) -> None:
+        try:
+            self._zulip_client.send(
+                to=[message.sender_email],
+                msg_type=message.type,
+                subject=message.subject,
+                content=content,
+                channel_name=message.display_recipient,
+            )
+        except Exception:
+            self._logger.error("Progress update failed", exc_info=True)
 
     def _preprocess_for_sql_transform(
         self,
