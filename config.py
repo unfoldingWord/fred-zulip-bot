@@ -26,7 +26,7 @@ class Config(BaseSettings):
 
     # History storage configuration
     HISTORY_DB_PATH: str = "./data/history.json"
-    HISTORY_MAX_LENGTH: int = 7
+    HISTORY_MAX_LENGTH: int = 5
     ENABLE_LANGGRAPH: bool = True
 
 

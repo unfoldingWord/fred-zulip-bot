@@ -49,7 +49,7 @@ class ChatService:
         logger: Any,
         api_key: str,
         enable_langgraph: bool = False,
-        history_max_length: int = 7,
+        history_max_length: int = 5,
         primary_model: str = "gemini-2.5-pro",
         fallback_model: str = "gemini-2.5-flash",
     ) -> None:
