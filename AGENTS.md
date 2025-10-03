@@ -227,9 +227,6 @@ pip-audit --ignore-vuln GHSA-f96h-pmfr-66vw --ignore-vuln GHSA-2c2j-9gv5-cj73 --
 
 # Run dev server
 uvicorn fred_zulip_bot.apps.api.app:create_app --factory --reload --port 8000
-
-# Data migration
-python tools/migrate_history_to_tinydb.py
 ```
 
 ---
