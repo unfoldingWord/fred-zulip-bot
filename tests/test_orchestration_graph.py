@@ -24,15 +24,19 @@ class StubService:
         self.calls.append(f"classify:{message.content}")
         return self.intents.pop(0)
 
-    def handle_chatbot(self, message: ZulipMessage, history: list[dict[str, Any]]) -> str:
+    def converse_with_fred_bot(
+        self, message: ZulipMessage, history: list[dict[str, Any]]
+    ) -> str:
         self.calls.append("converse_with_fred_bot")
         return self.responses[IntentType.CONVERSE_WITH_FRED_BOT][0]
 
-    def handle_other(self, message: ZulipMessage, history: list[dict[str, Any]]) -> str:
+    def handle_unsupported_function(
+        self, message: ZulipMessage, history: list[dict[str, Any]]
+    ) -> str:
         self.calls.append("handle_unsupported_function")
         return self.responses[IntentType.HANDLE_UNSUPPORTED_FUNCTION][0]
 
-    def handle_database(
+    def query_fred(
         self, message: ZulipMessage, history: list[dict[str, Any]]
     ) -> tuple[str, str, str]:
         self.calls.append("query_fred")

@@ -142,13 +142,13 @@ class ChatService:
         self._logger.info("Intent classified as: %s", intent.value)
 
         if intent is IntentType.CONVERSE_WITH_FRED_BOT:
-            return self.handle_chatbot(message, history)
+            return self.converse_with_fred_bot(message, history)
 
         if intent is IntentType.HANDLE_UNSUPPORTED_FUNCTION:
-            return self.handle_other(message, history)
+            return self.handle_unsupported_function(message, history)
 
         if intent is IntentType.QUERY_FRED:
-            response_text, _, _ = self.handle_database(message, history)
+            response_text, _, _ = self.query_fred(message, history)
             return response_text
 
         return ""
@@ -190,7 +190,7 @@ class ChatService:
             )
         )
 
-    def handle_chatbot(
+    def converse_with_fred_bot(
         self,
         message: ZulipMessage,
         history: list[dict[str, Any]],
@@ -205,7 +205,7 @@ class ChatService:
         self._history_repo.save(message.sender_email, history)
         return chatbot_text
 
-    def handle_other(
+    def handle_unsupported_function(
         self,
         message: ZulipMessage,
         history: list[dict[str, Any]],
@@ -220,7 +220,7 @@ class ChatService:
         self._history_repo.save(message.sender_email, history)
         return other_text
 
-    def handle_database(
+    def query_fred(
         self,
         message: ZulipMessage,
         history: list[dict[str, Any]],
