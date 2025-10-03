@@ -194,7 +194,7 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
     assert contents == [  # noqa: S101
         "Figuring out the best way to help.",
         "Checking the database for the details you asked about.",
-        "I have the data - summarizing it for you now.",
+        "I have the data - summarizing it for you now...",
         "There is one result.",
     ]
     assert mysql.last_query == "SELECT 1"  # noqa: S101
@@ -334,7 +334,7 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     assert contents == [  # noqa: S101
         "Figuring out the best way to help.",
         "Checking the database for the details you asked about.",
-        "I have the data - summarizing it for you now.",
+        "I have the data - summarizing it for you now...",
         "Use fallback",
     ]
     saved = history.get("user@example.com")
