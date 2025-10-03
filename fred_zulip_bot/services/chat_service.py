@@ -25,10 +25,9 @@ DEFAULT_FALLBACK_MESSAGE = (
 _SQL_PREPROCESS_HISTORY_LIMIT = 6
 _SQL_PREPROCESS_LOG_SNIPPET_LENGTH = 240
 
-_PROGRESS_INITIAL = "Thanks for your patience - I'm reviewing your request now."
 _PROGRESS_CLASSIFY = "Figuring out the best way to help..."
 _PROGRESS_QUERY = "Checking the database for the details you asked about..."
-_PROGRESS_SUMMARY = "I have the data - summarizing it for you now."
+_PROGRESS_SUMMARY = "I have the data - summarizing it for you now..."
 _PROGRESS_CHATBOT = "Drafting a reply about how I work..."
 _PROGRESS_UNSUPPORTED = "Working on a helpful explanation since I can't do that directly."
 _PROGRESS_UNSAFE = "That request looked unsafe, so I'm sending a fallback instead."
@@ -81,7 +80,7 @@ class ChatService:
                 to=[request.message.sender_email],
                 msg_type=request.message.type,
                 subject=request.message.subject,
-                content="Got it - I'll keep you posted as I work on this.",
+                content="thinking...",
                 channel_name=request.message.display_recipient,
             )
         except Exception:
@@ -111,7 +110,6 @@ class ChatService:
             self._logger.info("%s sent message '%s'", message.sender_email, message.content)
 
             self._record_user_message(message, history)
-            self._send_progress_update(message, _PROGRESS_INITIAL)
 
             if self._enable_langgraph:
                 response_text = self._run_langgraph_flow(request, history)

@@ -170,7 +170,6 @@ def test_process_user_message_chatbot(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Drafting a reply about how I work...",
         "Hello there",
@@ -193,10 +192,9 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Checking the database for the details you asked about...",
-        "I have the data - summarizing it for you now.",
+        "I have the data - summarizing it for you now...",
         "There is one result.",
     ]
     assert mysql.last_query == "SELECT 1"  # noqa: S101
@@ -279,7 +277,6 @@ def test_process_user_message_other(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Working on a helpful explanation since I can't do that directly.",
         "Cannot help",
@@ -305,6 +302,21 @@ def test_handle_chat_request_rejects_invalid_token(monkeypatch, sql_service):
     assert exc.value.status_code == 401  # noqa: S101
 
 
+def test_handle_chat_request_sends_ack(monkeypatch, sql_service):
+    service, zulip, _, _, _ = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="converse_with_fred_bot",
+        chatbot_reply="unused",
+    )
+
+    request = make_request("hi")
+
+    service.handle_chat_request(request, BackgroundTasks())
+
+    assert zulip.sent[0]["content"] == "thinking..."  # noqa: S101
+
+
 def test_process_user_message_database_salvage(monkeypatch, sql_service):
     service, zulip, history, mysql, _ = build_service(
         monkeypatch,
@@ -320,10 +332,9 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     assert mysql.last_query == "SELECT name"  # noqa: S101
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Checking the database for the details you asked about...",
-        "I have the data - summarizing it for you now.",
+        "I have the data - summarizing it for you now...",
         "Use fallback",
     ]
     saved = history.get("user@example.com")
@@ -348,7 +359,6 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
     friendly = DEFAULT_FALLBACK_MESSAGE
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Checking the database for the details you asked about...",
         "That request looked unsafe, so I'm sending a fallback instead.",
@@ -375,8 +385,7 @@ def test_process_user_message_failure_sends_fallback(monkeypatch, sql_service):
     service.process_user_message(make_request("hi"))
 
     contents = [entry["content"] for entry in zulip.sent]
-    assert contents[0] == "Thanks for your patience - I'm reviewing your request now."  # noqa: S101
-    assert contents[-1] == DEFAULT_FALLBACK_MESSAGE  # noqa: S101
+    assert contents == [DEFAULT_FALLBACK_MESSAGE]  # noqa: S101
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == [DEFAULT_FALLBACK_MESSAGE]  # noqa: S101
     assert any("Processing user message failed" in entry[0] for entry in logger.errors)  # noqa: S101
@@ -424,7 +433,6 @@ def test_process_user_message_with_langgraph(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Thanks for your patience - I'm reviewing your request now.",
         "Figuring out the best way to help...",
         "Drafting a reply about how I work...",
         "LangGraph reply",
