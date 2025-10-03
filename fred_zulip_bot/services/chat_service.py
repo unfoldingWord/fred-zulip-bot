@@ -214,13 +214,18 @@ class ChatService:
         self._logger.info("SQL generated: %s", sql_text)
 
         is_safe_sql = self._sql_service.is_safe_sql(sql_text)
-        if is_safe_sql:
-            database_data = self._mysql_client.select(sql_text)
-        else:
-            self._logger.info("Unsafe SQL blocked; using fallback response")
-            database_data = sql_text
+        if not is_safe_sql:
+            self._logger.info("Unsafe SQL blocked; sending friendly fallback")
+            friendly_message = (
+                "I'm having trouble responding right now. Please report this to my creators."
+            )
+            history.append({"role": "model", "parts": [friendly_message]})
+            self._history_repo.save(message.sender_email, history)
+            return friendly_message, sql_text, "salvage"
 
-        if is_safe_sql and database_data != "salvage":
+        database_data = self._mysql_client.select(sql_text)
+
+        if database_data != "salvage":
             self._logger.info("SQL result captured rows=%s", database_data[:200])
             summary_content = (
                 f"The SQL query returned {database_data}. "

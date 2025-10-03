@@ -223,6 +223,26 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     assert all("SELECT" not in parts[0] for parts in parts_list)  # noqa: S101
 
 
+def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
+    service, zulip, history, mysql, _ = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="database",
+        sql_text="Not SQL",
+        summary_text="unused",
+    )
+
+    monkeypatch.setattr(service._sql_service, "is_safe_sql", lambda _: False)
+
+    service.process_user_message(make_request("unsafe"))
+
+    friendly = "I'm having trouble responding right now. Please report this to my creators."
+    assert zulip.sent[0]["content"] == friendly  # noqa: S101
+    saved = history.get("user@example.com")
+    assert saved[-1]["parts"] == [friendly]  # noqa: S101
+    assert not hasattr(mysql, "last_query")  # noqa: S101
+
+
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="LangGraph requires Python >= 3.10")
 def test_process_user_message_with_langgraph(monkeypatch, sql_service):
     service, zulip, history, _, _ = build_service(
