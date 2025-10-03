@@ -8,25 +8,26 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "PGH", "RUF"]
+extend-select = ["SIM", "C4", "PLR0915"]
 ignore = ["E203", "E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.ruff.lint.pylint]
+max-statements = 50
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
+mypy_path = "stubs"
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing"
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["requests", "google.generativeai", "mysql.connector", "tinydb"]
+module = ["requests", "mysql.connector", "tinydb"]
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["config"]
-ignore_errors = true

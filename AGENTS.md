@@ -36,7 +36,6 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
   - Pass dependencies explicitly; **no module-level singletons**.
 
 - **SRP & Size Limits**
-  - **Function length ≤ 60 lines** (hard ceiling; prefer ~20–40).
   - **Class length ≤ 300 lines**; **module length ≤ 500 lines**.
   - **Cyclomatic complexity:** keep functions ≤ 10 (prefer ≤ 7). Refactor early.
   - **One reason to change:** If a function/class has more than one responsibility, split it.
@@ -199,6 +198,8 @@ pre-commit install
 
 # Full checks
 ruff check . && ruff format --check . && mypy fred_zulip_bot && pytest -q
+bandit -q -r fred_zulip_bot
+pip-audit --ignore-vuln GHSA-f96h-pmfr-66vw --ignore-vuln GHSA-2c2j-9gv5-cj73 --ignore-vuln GHSA-4xh5-x5gv-qwph
 
 # Run dev server
 uvicorn fred_zulip_bot.apps.api.app:create_app --factory --reload --port 8000
@@ -215,7 +216,8 @@ python tools/migrate_history_to_tinydb.py
 Own the phased roadmap and keep PRs small with rollbacks.
 
 ### CodeMod
-Apply structural changes without altering runtime behavior. Keep functions ≤ 60 LOC.
+Apply structural changes without altering runtime behavior. Reduce large functions until they
+pass Ruff's `PLR0915` check (≤ 50 executable statements) while keeping behavior unchanged.
 
 ### TestBuilder
 Create/maintain tests; prefer fakes/mocks at boundaries; enforce coverage.

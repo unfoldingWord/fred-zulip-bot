@@ -24,5 +24,9 @@ jobs:
         run: ruff format --check fred_zulip_bot tests
       - name: Type check
         run: mypy fred_zulip_bot
+      - name: Security scan
+        run: bandit -q -r fred_zulip_bot
+      - name: Dependency audit
+        run: pip-audit --ignore-vuln GHSA-f96h-pmfr-66vw --ignore-vuln GHSA-2c2j-9gv5-cj73 --ignore-vuln GHSA-4xh5-x5gv-qwph
       - name: Test
         run: pytest

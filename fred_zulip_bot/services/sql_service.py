@@ -52,7 +52,4 @@ class SqlService:
         if DANGEROUS_PATTERN.search(stripped):
             return False
 
-        if stripped.count(";") > 0:
-            return False
-
-        return True
+        return stripped.count(";") == 0

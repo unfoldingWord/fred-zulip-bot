@@ -34,8 +34,9 @@ class ZulipClient:
             payload["subject"] = subject
             payload["to"] = channel_name
 
-        requests.post(  # noqa: S113 - legacy behavior without explicit timeout
+        requests.post(
             f"{self._realm_url}/api/v1/messages",
             data=payload,
             auth=(self._email, self._api_key),
+            timeout=10,
         )
