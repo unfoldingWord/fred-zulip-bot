@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, HTTPException
 
 from fred_zulip_bot.core.models import ChatRequest, ZulipMessage
 from fred_zulip_bot.services import intent_service
-from fred_zulip_bot.services.chat_service import ChatService
+from fred_zulip_bot.services.chat_service import DEFAULT_FALLBACK_MESSAGE, ChatService
 from fred_zulip_bot.services.sql_service import SqlService
 
 
@@ -236,11 +236,59 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
 
     service.process_user_message(make_request("unsafe"))
 
-    friendly = "I'm having trouble responding right now. Please report this to my creators."
+    friendly = DEFAULT_FALLBACK_MESSAGE
     assert zulip.sent[0]["content"] == friendly  # noqa: S101
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == [friendly]  # noqa: S101
     assert not hasattr(mysql, "last_query")  # noqa: S101
+
+
+def test_process_user_message_failure_sends_fallback(monkeypatch, sql_service):
+    service, zulip, history, _, logger = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="chatbot",
+        chatbot_reply="unused",
+    )
+
+    def explode(*args: Any, **kwargs: Any) -> str:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(service, "_run_legacy_flow", explode)
+
+    service.process_user_message(make_request("hi"))
+
+    assert zulip.sent[0]["content"] == DEFAULT_FALLBACK_MESSAGE  # noqa: S101
+    saved = history.get("user@example.com")
+    assert saved[-1]["parts"] == [DEFAULT_FALLBACK_MESSAGE]  # noqa: S101
+    assert any("Processing user message failed" in entry[0] for entry in logger.errors)  # noqa: S101
+
+
+def test_process_user_message_retries_on_send_failure(monkeypatch, sql_service):
+    service, _, history, _, logger = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="chatbot",
+        chatbot_reply="Hello",
+    )
+
+    attempts: list[dict[str, Any]] = []
+    call_count = {"value": 0}
+
+    def flaky_send(**kwargs: Any) -> None:
+        call_count["value"] += 1
+        if call_count["value"] == 1:
+            raise RuntimeError("network glitch")
+        attempts.append(kwargs)
+
+    monkeypatch.setattr(service._zulip_client, "send", flaky_send)
+
+    service.process_user_message(make_request("hi"))
+
+    assert call_count["value"] == 2  # noqa: S101
+    assert attempts[0]["content"] == "Hello"  # noqa: S101
+    assert history.get("user@example.com")[-1]["parts"] == ["Hello"]  # noqa: S101
+    assert len(logger.errors) == 1  # noqa: S101
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="LangGraph requires Python >= 3.10")

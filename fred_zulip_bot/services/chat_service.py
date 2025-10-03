@@ -17,6 +17,10 @@ from fred_zulip_bot.services import intent_service
 from fred_zulip_bot.services.intent_service import IntentType
 from fred_zulip_bot.services.sql_service import SqlService
 
+DEFAULT_FALLBACK_MESSAGE = (
+    "I'm having trouble responding right now. Please report this to my creators."
+)
+
 
 class ChatService:
     """Handle chat requests by coordinating adapters and LLM prompts."""
@@ -78,10 +82,20 @@ class ChatService:
         """Process a single Zulip message in the background."""
 
         message = request.message
+        response_text: str | None = None
+        history: list[dict[str, Any]] = []
+        should_record_response = False
 
         try:
             history = self._history_repo.get(message.sender_email)
+        except Exception:
+            self._logger.error(
+                "History fetch failed; continuing with empty history",
+                exc_info=True,
+            )
+            history = []
 
+        try:
             self._logger.info("%s sent message '%s'", message.sender_email, message.content)
 
             self._record_user_message(message, history)
@@ -91,18 +105,25 @@ class ChatService:
             else:
                 response_text = self._run_legacy_flow(message, history)
 
-            if response_text:
-                self._logger.info("Fred response: %s", response_text)
+            if not response_text:
+                raise ValueError("empty response generated")
 
-                self._zulip_client.send(
-                    to=[message.sender_email],
-                    msg_type=message.type,
-                    subject=message.subject,
-                    content=response_text,
-                    channel_name=message.display_recipient,
-                )
-        except Exception as exc:
-            self._logger.error("Error: %s", exc)
+            self._logger.info("Fred response: %s", response_text)
+        except Exception:
+            self._logger.error("Processing user message failed", exc_info=True)
+            response_text = DEFAULT_FALLBACK_MESSAGE
+            should_record_response = True
+        finally:
+            if response_text is None:
+                response_text = DEFAULT_FALLBACK_MESSAGE
+                should_record_response = True
+
+            self._deliver_response(
+                message,
+                response_text,
+                history,
+                record_history=should_record_response,
+            )
 
     def _record_user_message(
         self,
@@ -216,9 +237,7 @@ class ChatService:
         is_safe_sql = self._sql_service.is_safe_sql(sql_text)
         if not is_safe_sql:
             self._logger.info("Unsafe SQL blocked; sending friendly fallback")
-            friendly_message = (
-                "I'm having trouble responding right now. Please report this to my creators."
-            )
+            friendly_message = DEFAULT_FALLBACK_MESSAGE
             history.append({"role": "model", "parts": [friendly_message]})
             self._history_repo.save(message.sender_email, history)
             return friendly_message, sql_text, "salvage"
@@ -254,6 +273,42 @@ class ChatService:
         self._history_repo.save(message.sender_email, history)
 
         return answer_text, sql_text, database_data
+
+    def _deliver_response(
+        self,
+        message: ZulipMessage,
+        content: str,
+        history: list[dict[str, Any]],
+        *,
+        record_history: bool,
+        max_attempts: int = 2,
+    ) -> None:
+        if record_history:
+            history.append({"role": "model", "parts": [content]})
+            try:
+                self._history_repo.save(message.sender_email, history)
+            except Exception:
+                self._logger.error("History save failed", exc_info=True)
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                self._zulip_client.send(
+                    to=[message.sender_email],
+                    msg_type=message.type,
+                    subject=message.subject,
+                    content=content,
+                    channel_name=message.display_recipient,
+                )
+                return
+            except Exception:
+                self._logger.error(
+                    "Send Zulip Message Failed (attempt %s/%s)",
+                    attempt,
+                    max_attempts,
+                    exc_info=True,
+                )
+        # If all attempts fail we have nothing left to try; log once more for visibility.
+        self._logger.error("Exhausted attempts to deliver message to %s", message.sender_email)
 
     def _ask_model(
         self,
