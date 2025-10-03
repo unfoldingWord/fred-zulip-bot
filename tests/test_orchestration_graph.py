@@ -24,9 +24,7 @@ class StubService:
         self.calls.append(f"classify:{message.content}")
         return self.intents.pop(0)
 
-    def converse_with_fred_bot(
-        self, message: ZulipMessage, history: list[dict[str, Any]]
-    ) -> str:
+    def converse_with_fred_bot(self, message: ZulipMessage, history: list[dict[str, Any]]) -> str:
         self.calls.append("converse_with_fred_bot")
         return self.responses[IntentType.CONVERSE_WITH_FRED_BOT][0]
 
