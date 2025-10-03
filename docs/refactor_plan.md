@@ -373,7 +373,7 @@ fred_zulip_bot/
 
 **Gates**
 - pre-commit on changed files: `ruff`, `mypy`, `pytest -q`.
-- CI coverage threshold: start at 70%, ratchet up later.
+- CI coverage threshold: start at 70%; enforce with `--cov-fail-under=70` in `pytest` addopts.
 
 ---
 
