@@ -193,7 +193,7 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
         "Figuring out the best way to help.",
-        "Checking the database for the details you asked about. This could take some time.",
+        "Checking the database for the details you asked about. This could take some time. Thanks for your patience.",
         "I have the data - summarizing it for you now...",
         "There is one result.",
     ]
@@ -333,7 +333,7 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
         "Figuring out the best way to help.",
-        "Checking the database for the details you asked about. This could take some time.",
+        "Checking the database for the details you asked about. This could take some time. Thanks for your patience.",
         "I have the data - summarizing it for you now...",
         "Use fallback",
     ]
@@ -360,7 +360,7 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
         "Figuring out the best way to help.",
-        "Checking the database for the details you asked about. This could take some time.",
+        "Checking the database for the details you asked about. This could take some time. Thanks for your patience.",
         "That request looked unsafe, so I'm sending a fallback instead.",
         friendly,
     ]

@@ -28,6 +28,7 @@ _SQL_PREPROCESS_LOG_SNIPPET_LENGTH = 240
 _PROGRESS_CLASSIFY = "Figuring out the best way to help."
 _PROGRESS_QUERY = (
     "Checking the database for the details you asked about. This could take some time."
+    " Thanks for your patience."
 )
 _PROGRESS_SUMMARY = "I have the data - summarizing it for you now..."
 _PROGRESS_CHATBOT = "Drafting a reply about how I work."
