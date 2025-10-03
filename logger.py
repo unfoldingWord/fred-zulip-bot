@@ -1,8 +1,8 @@
 # logger.py
 import logging
-from logging.handlers import RotatingFileHandler
 import os
 import sys
+from logging.handlers import RotatingFileHandler
 
 # Create logs directory if it doesn't exist
 LOG_DIR = "logs"
@@ -14,7 +14,7 @@ LOG_FILE = os.path.join(LOG_DIR, "app.log")
 
 # Set up rotating log handler (e.g., 1MB per file, up to 5 backups)
 handler = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=5)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 handler.setFormatter(formatter)
 
 # Create logger instance

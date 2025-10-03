@@ -9,3 +9,8 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
+        args: ["fred_zulip_bot"]
+        additional_dependencies:
+          - pydantic
+          - pydantic-settings
+        pass_filenames: false

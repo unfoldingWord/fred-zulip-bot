@@ -4,17 +4,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter, FastAPI
 
-router = APIRouter()
+router: APIRouter = APIRouter()
 
 
-@router.get("/healthz")
 def health() -> dict[str, str]:
     """Return liveness status."""
 
     return {"status": "ok"}
 
 
-@router.get("/ready")
 def ready() -> dict[str, str]:
     """Return readiness status."""
 
@@ -24,4 +22,6 @@ def ready() -> dict[str, str]:
 def register_health_routes(app: FastAPI) -> None:
     """Attach health routes to the provided application."""
 
+    router.add_api_route("/healthz", health, methods=["GET"])
+    router.add_api_route("/ready", ready, methods=["GET"])
     app.include_router(router)

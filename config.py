@@ -1,4 +1,3 @@
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,4 +30,4 @@ class Config(BaseSettings):
     ENABLE_LANGGRAPH: bool = True
 
 
-config = Config()  # type: ignore[call-arg]
+config = Config()

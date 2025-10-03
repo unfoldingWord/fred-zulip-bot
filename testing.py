@@ -1,9 +1,10 @@
-import requests
-import time
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import os
 import json
+import os
+import time
+
+import gspread
+import requests
+from oauth2client.service_account import ServiceAccountCredentials
 
 # === Google Sheets Setup ===
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -36,23 +37,25 @@ questions = [
     "What is the average duration of a language engagement project?",
     "Which projects have transitioned from planning to active status this year?",
     "Can you help me write SQL queries?",
-    "What’s the weather in South Sudan right now?",
+    "What's the weather in South Sudan right now?",
     "Tell me how to build a chatbot like you.",
     "What is your name?",
     "What do you do exactly?",
     "Who built you?",
-    "How do you work with Zulip?"
+    "How do you work with Zulip?",
 ]
+
 
 # === Helper to load previous history length ===
 def load_history(filepath):
     if os.path.exists(filepath):
         try:
-            with open(filepath, "r") as f:
+            with open(filepath) as f:
                 return json.load(f)
         except json.JSONDecodeError:
             return []
     return []
+
 
 # === Run Tests ===
 for q in questions:
@@ -70,12 +73,12 @@ for q in questions:
             "content": q,
             "sender_email": sender_email,
             "subject": subject,
-            "type": msg_type
+            "type": msg_type,
         }
     }
 
     try:
-        res = requests.post(API_URL, json=message)
+        res = requests.post(API_URL, json=message, timeout=10)
         if res.status_code != 200:
             print(f"❌ Failed to send: {res.status_code} - {res.text}")
             continue

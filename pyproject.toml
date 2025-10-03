@@ -23,6 +23,13 @@ strict = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
 mypy_path = "stubs"
+plugins = ["pydantic.mypy"]
+explicit_package_bases = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_fields = true
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing --cov-fail-under=70"
@@ -30,4 +37,8 @@ testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
 module = ["requests", "mysql.connector", "tinydb"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["fastapi", "fastapi.*"]
 ignore_missing_imports = true
