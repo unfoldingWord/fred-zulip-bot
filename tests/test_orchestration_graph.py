@@ -25,18 +25,18 @@ class StubService:
         return self.intents.pop(0)
 
     def handle_chatbot(self, message: ZulipMessage, history: list[dict[str, Any]]) -> str:
-        self.calls.append("chatbot")
-        return self.responses[IntentType.CHATBOT][0]
+        self.calls.append("converse_with_fred_bot")
+        return self.responses[IntentType.CONVERSE_WITH_FRED_BOT][0]
 
     def handle_other(self, message: ZulipMessage, history: list[dict[str, Any]]) -> str:
-        self.calls.append("other")
-        return self.responses[IntentType.OTHER][0]
+        self.calls.append("handle_unsupported_function")
+        return self.responses[IntentType.HANDLE_UNSUPPORTED_FUNCTION][0]
 
     def handle_database(
         self, message: ZulipMessage, history: list[dict[str, Any]]
     ) -> tuple[str, str, str]:
-        self.calls.append("database")
-        return self.responses[IntentType.DATABASE]
+        self.calls.append("query_fred")
+        return self.responses[IntentType.QUERY_FRED]
 
 
 class DummyLogger:
@@ -60,13 +60,13 @@ def make_request(content: str) -> ChatRequest:
     )
 
 
-def test_graph_routes_chatbot() -> None:
+def test_graph_routes_converse_with_fred_bot() -> None:
     service = StubService(
-        intents=[IntentType.CHATBOT],
+        intents=[IntentType.CONVERSE_WITH_FRED_BOT],
         responses={
-            IntentType.CHATBOT: ("hi", "", ""),
-            IntentType.OTHER: ("", "", ""),
-            IntentType.DATABASE: ("", "", ""),
+            IntentType.CONVERSE_WITH_FRED_BOT: ("hi", "", ""),
+            IntentType.HANDLE_UNSUPPORTED_FUNCTION: ("", "", ""),
+            IntentType.QUERY_FRED: ("", "", ""),
         },
     )
     logger = DummyLogger()
@@ -75,16 +75,16 @@ def test_graph_routes_chatbot() -> None:
     result = runner.invoke(GraphState(request=make_request("hello"), history=[], intent=None))
 
     assert result["response"] == "hi"  # noqa: S101
-    assert "chatbot" in service.calls  # noqa: S101
+    assert "converse_with_fred_bot" in service.calls  # noqa: S101
 
 
 def test_graph_routes_database() -> None:
     service = StubService(
-        intents=[IntentType.DATABASE],
+        intents=[IntentType.QUERY_FRED],
         responses={
-            IntentType.CHATBOT: ("", "", ""),
-            IntentType.OTHER: ("", "", ""),
-            IntentType.DATABASE: ("answer", "SQL", "RESULT"),
+            IntentType.CONVERSE_WITH_FRED_BOT: ("", "", ""),
+            IntentType.HANDLE_UNSUPPORTED_FUNCTION: ("", "", ""),
+            IntentType.QUERY_FRED: ("answer", "SQL", "RESULT"),
         },
     )
     logger = DummyLogger()
@@ -97,13 +97,13 @@ def test_graph_routes_database() -> None:
     assert result["result"] == "RESULT"  # noqa: S101
 
 
-def test_graph_default_to_other() -> None:
+def test_graph_default_to_handle_unsupported_function() -> None:
     service = StubService(
-        intents=[IntentType.OTHER],
+        intents=[IntentType.HANDLE_UNSUPPORTED_FUNCTION],
         responses={
-            IntentType.CHATBOT: ("", "", ""),
-            IntentType.OTHER: ("fallback", "", ""),
-            IntentType.DATABASE: ("", "", ""),
+            IntentType.CONVERSE_WITH_FRED_BOT: ("", "", ""),
+            IntentType.HANDLE_UNSUPPORTED_FUNCTION: ("fallback", "", ""),
+            IntentType.QUERY_FRED: ("", "", ""),
         },
     )
     logger = DummyLogger()

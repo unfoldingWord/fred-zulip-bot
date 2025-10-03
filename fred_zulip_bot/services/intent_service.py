@@ -13,18 +13,18 @@ class _AskFn(Protocol):
 class IntentType(str, Enum):
     """Supported intent labels for the chat assistant."""
 
-    DATABASE = "database"
-    CHATBOT = "chatbot"
-    OTHER = "other"
+    QUERY_FRED = "query_fred"
+    CONVERSE_WITH_FRED_BOT = "converse_with_fred_bot"
+    HANDLE_UNSUPPORTED_FUNCTION = "handle_unsupported_function"
 
 
 INTENT_PROMPT = (
     "You are an intent classifier. A user has sent a message."
     "Your task is to classify their intent into one of the following categories:\n"
-    "- database: The user wants to query or access information from the database.\n"
-    "- chatbot: The user is asking about the chatbot itself, like its purpose, name, capabilities, etc.\n"
-    "- other: Anything that does not fit the above categories.\n"
-    "Respond ONLY with one of the following words: database, chatbot, other.\n"
+    "- query_fred: The user wants to query or access information from the database.\n"
+    "- converse_with_fred_bot: The user is asking about the chatbot itself, like its purpose, name, capabilities, etc.\n"
+    "- handle_unsupported_function: Anything that does not fit the above categories.\n"
+    "Respond ONLY with one of the following words: query_fred, converse_with_fred_bot, handle_unsupported_function.\n"
 )
 
 CHATBOT_PROMPT = (
@@ -47,8 +47,8 @@ OTHER_PROMPT = (
     "to the user that you can't help them with that, and redirect them by informing them of things you can do."
 )
 PROMPTS_BY_INTENT = {
-    IntentType.CHATBOT: CHATBOT_PROMPT,
-    IntentType.OTHER: OTHER_PROMPT,
+    IntentType.CONVERSE_WITH_FRED_BOT: CHATBOT_PROMPT,
+    IntentType.HANDLE_UNSUPPORTED_FUNCTION: OTHER_PROMPT,
 }
 
 
@@ -61,4 +61,4 @@ def classify_intent(ask_fn: _AskFn) -> IntentType:
     try:
         return IntentType(normalized)
     except ValueError:
-        return IntentType.OTHER
+        return IntentType.HANDLE_UNSUPPORTED_FUNCTION

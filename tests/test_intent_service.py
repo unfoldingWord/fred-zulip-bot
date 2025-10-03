@@ -18,15 +18,15 @@ def make_asker(result: str):
 
 
 def test_classify_intent_database_label() -> None:
-    intent = classify_intent(make_asker("database"))
-    assert intent is IntentType.DATABASE  # noqa: S101
+    intent = classify_intent(make_asker("query_fred"))
+    assert intent is IntentType.QUERY_FRED  # noqa: S101
 
 
 def test_classify_intent_trims_and_lowercases() -> None:
-    intent = classify_intent(make_asker("  ChatBot\n"))
-    assert intent is IntentType.CHATBOT  # noqa: S101
+    intent = classify_intent(make_asker("  CoNvErSe_With_Fred_Bot\n"))
+    assert intent is IntentType.CONVERSE_WITH_FRED_BOT  # noqa: S101
 
 
 def test_classify_intent_defaults_to_other() -> None:
     intent = classify_intent(make_asker("something else"))
-    assert intent is IntentType.OTHER  # noqa: S101
+    assert intent is IntentType.HANDLE_UNSUPPORTED_FUNCTION  # noqa: S101

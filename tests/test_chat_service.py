@@ -140,7 +140,7 @@ def test_process_user_message_chatbot(monkeypatch, sql_service):
     service, zulip, history, _, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="chatbot",
+        intent_label="converse_with_fred_bot",
         chatbot_reply="Hello there",
     )
 
@@ -155,7 +155,7 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
     service, zulip, history, mysql, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="database",
+        intent_label="query_fred",
         sql_text="SELECT 1",
         db_result="(1,)",
         summary_text="There is one result.",
@@ -175,7 +175,7 @@ def test_process_user_message_other(monkeypatch, sql_service):
     service, zulip, history, _, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="other",
+        intent_label="handle_unsupported_function",
         other_reply="Cannot help",
     )
 
@@ -190,7 +190,7 @@ def test_handle_chat_request_rejects_invalid_token(monkeypatch, sql_service):
     service, _, _, _, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="chatbot",
+        intent_label="converse_with_fred_bot",
         chatbot_reply="Hi",
     )
 
@@ -207,7 +207,7 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     service, zulip, history, mysql, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="database",
+        intent_label="query_fred",
         sql_text="SELECT name",
         db_result="salvage",
         summary_text="Use fallback",
@@ -227,7 +227,7 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
     service, zulip, history, mysql, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="database",
+        intent_label="query_fred",
         sql_text="Not SQL",
         summary_text="unused",
     )
@@ -247,7 +247,7 @@ def test_process_user_message_failure_sends_fallback(monkeypatch, sql_service):
     service, zulip, history, _, logger = build_service(
         monkeypatch,
         sql_service,
-        intent_label="chatbot",
+        intent_label="converse_with_fred_bot",
         chatbot_reply="unused",
     )
 
@@ -268,7 +268,7 @@ def test_process_user_message_retries_on_send_failure(monkeypatch, sql_service):
     service, _, history, _, logger = build_service(
         monkeypatch,
         sql_service,
-        intent_label="chatbot",
+        intent_label="converse_with_fred_bot",
         chatbot_reply="Hello",
     )
 
@@ -296,7 +296,7 @@ def test_process_user_message_with_langgraph(monkeypatch, sql_service):
     service, zulip, history, _, _ = build_service(
         monkeypatch,
         sql_service,
-        intent_label="chatbot",
+        intent_label="converse_with_fred_bot",
         chatbot_reply="LangGraph reply",
         use_langgraph=True,
     )

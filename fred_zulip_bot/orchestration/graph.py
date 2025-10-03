@@ -78,30 +78,36 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
             cleaned = intent.strip().lower()
             if cleaned in {item.value for item in IntentType}:
                 return cleaned
-        return IntentType.OTHER.value
+        return IntentType.HANDLE_UNSUPPORTED_FUNCTION.value
 
-    def chatbot_node(state: GraphState) -> dict[str, Any]:
+    def converse_with_fred_bot(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response = chat_service.handle_chatbot(request.message, history)
-        logger.info("LangGraph node=chatbot response_chars=%s", len(response or ""))
+        logger.info(
+            "LangGraph node=converse_with_fred_bot response_chars=%s",
+            len(response or ""),
+        )
         return {"response": response}
 
-    def other_node(state: GraphState) -> dict[str, Any]:
+    def handle_unsupported_function(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response = chat_service.handle_other(request.message, history)
-        logger.info("LangGraph node=other response_chars=%s", len(response or ""))
+        logger.info(
+            "LangGraph node=handle_unsupported_function response_chars=%s",
+            len(response or ""),
+        )
         return {"response": response}
 
-    def database_node(state: GraphState) -> dict[str, Any]:
+    def query_fred(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response, sql_text, result_text = chat_service.handle_database(
             request.message,
             history,
         )
-        logger.info("LangGraph node=database has_sql=%s", bool(sql_text))
+        logger.info("LangGraph node=query_fred has_sql=%s", bool(sql_text))
         return {
             "response": response,
             "sql": sql_text,
@@ -109,23 +115,23 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
         }
 
     graph.add_node("classify_intent", classify_intent_node)
-    graph.add_node("chatbot", chatbot_node)
-    graph.add_node("other", other_node)
-    graph.add_node("database", database_node)
+    graph.add_node("converse_with_fred_bot_node", converse_with_fred_bot)
+    graph.add_node("handle_unsupported_function_node", handle_unsupported_function)
+    graph.add_node("query_fred_node", query_fred)
 
     graph.set_entry_point("classify_intent")
     graph.add_conditional_edges(
         "classify_intent",
         route_intent,
         {
-            IntentType.CHATBOT.value: "chatbot",
-            IntentType.OTHER.value: "other",
-            IntentType.DATABASE.value: "database",
+            IntentType.CONVERSE_WITH_FRED_BOT.value: "converse_with_fred_bot_node",
+            IntentType.HANDLE_UNSUPPORTED_FUNCTION.value: "handle_unsupported_function_node",
+            IntentType.QUERY_FRED.value: "query_fred_node",
         },
     )
-    graph.add_edge("chatbot", END)
-    graph.add_edge("other", END)
-    graph.add_edge("database", END)
+    graph.add_edge("converse_with_fred_bot_node", END)
+    graph.add_edge("handle_unsupported_function_node", END)
+    graph.add_edge("query_fred_node", END)
 
     compiled = graph.compile()
     return cast(GraphRunner, compiled)

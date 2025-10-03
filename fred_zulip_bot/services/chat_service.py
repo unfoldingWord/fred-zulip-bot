@@ -141,13 +141,13 @@ class ChatService:
         intent = self.classify_intent(message)
         self._logger.info("Intent classified as: %s", intent.value)
 
-        if intent is IntentType.CHATBOT:
+        if intent is IntentType.CONVERSE_WITH_FRED_BOT:
             return self.handle_chatbot(message, history)
 
-        if intent is IntentType.OTHER:
+        if intent is IntentType.HANDLE_UNSUPPORTED_FUNCTION:
             return self.handle_other(message, history)
 
-        if intent is IntentType.DATABASE:
+        if intent is IntentType.QUERY_FRED:
             response_text, _, _ = self.handle_database(message, history)
             return response_text
 
