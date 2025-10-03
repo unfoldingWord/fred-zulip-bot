@@ -6,6 +6,7 @@ pydantic-settings==2.5.2
 tinydb==4.8.0
 requests==2.32.4
 google-generativeai==0.8.5
+langgraph==0.6.8
 
 # Database connectors
 mysql-connector-python==9.3.0
