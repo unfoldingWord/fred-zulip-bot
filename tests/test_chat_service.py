@@ -166,7 +166,9 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
     assert mysql.last_query == "SELECT 1"  # noqa: S101
     assert zulip.sent[0]["content"] == "There is one result."  # noqa: S101
     saved = history.get("user@example.com")
-    assert saved[-1]["parts"] == ["There is one result."]  # noqa: S101
+    parts_list = [entry.get("parts") for entry in saved if entry.get("parts")]
+    assert parts_list[-1] == ["There is one result."]  # noqa: S101
+    assert all("SELECT" not in parts[0] for parts in parts_list)  # noqa: S101
 
 
 def test_process_user_message_other(monkeypatch, sql_service):
@@ -216,7 +218,9 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     assert mysql.last_query == "SELECT name"  # noqa: S101
     assert zulip.sent[0]["content"] == "Use fallback"  # noqa: S101
     saved = history.get("user@example.com")
-    assert saved[-1]["parts"] == ["Use fallback"]  # noqa: S101
+    parts_list = [entry.get("parts") for entry in saved if entry.get("parts")]
+    assert parts_list[-1] == ["Use fallback"]  # noqa: S101
+    assert all("SELECT" not in parts[0] for parts in parts_list)  # noqa: S101
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10), reason="LangGraph requires Python >= 3.10")

@@ -213,8 +213,6 @@ class ChatService:
 
         self._logger.info("SQL generated: %s", sql_text)
 
-        history.append({"role": "model", "parts": [sql_text]})
-
         if not self._sql_service.is_safe_sql(sql_text):
             raise ValueError("Unsafe SQL query detected — blocked from execution.")
 
