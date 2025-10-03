@@ -25,7 +25,7 @@ disallow_untyped_defs = true
 mypy_path = "stubs"
 
 [tool.pytest.ini_options]
-addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing"
+addopts = "-q --cov=fred_zulip_bot --cov-report=term-missing --cov-fail-under=70"
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]

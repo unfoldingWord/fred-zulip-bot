@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib import import_module
 from types import ModuleType
-from typing import Any, Protocol, TypedDict, cast
+from typing import Any, Optional, Protocol, TypedDict, cast
 
 from fred_zulip_bot.core.models import ChatRequest, ZulipMessage
 from fred_zulip_bot.services.intent_service import IntentType
@@ -47,10 +47,10 @@ class GraphState(TypedDict, total=False):
 
     request: ChatRequest
     history: list[dict[str, Any]]
-    intent: IntentType | None
-    sql: str | None
-    result: str | None
-    response: str | None
+    intent: Optional[IntentType]  # noqa: UP007
+    sql: Optional[str]  # noqa: UP007
+    result: Optional[str]  # noqa: UP007
+    response: Optional[str]  # noqa: UP007
 
 
 class GraphRunner(Protocol):
