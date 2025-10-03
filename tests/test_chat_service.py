@@ -170,8 +170,8 @@ def test_process_user_message_chatbot(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
-        "Drafting a reply about how I work...",
+        "Figuring out the best way to help.",
+        "Drafting a reply about how I work.",
         "Hello there",
     ]
     saved = history.get("user@example.com")
@@ -192,9 +192,9 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
-        "Checking the database for the details you asked about...",
-        "I have the data - summarizing it for you now...",
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
+        "I have the data - summarizing it for you now.",
         "There is one result.",
     ]
     assert mysql.last_query == "SELECT 1"  # noqa: S101
@@ -277,7 +277,7 @@ def test_process_user_message_other(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
+        "Figuring out the best way to help.",
         "Working on a helpful explanation since I can't do that directly.",
         "Cannot help",
     ]
@@ -332,9 +332,9 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     assert mysql.last_query == "SELECT name"  # noqa: S101
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
-        "Checking the database for the details you asked about...",
-        "I have the data - summarizing it for you now...",
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
+        "I have the data - summarizing it for you now.",
         "Use fallback",
     ]
     saved = history.get("user@example.com")
@@ -359,8 +359,8 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
     friendly = DEFAULT_FALLBACK_MESSAGE
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
-        "Checking the database for the details you asked about...",
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
         "That request looked unsafe, so I'm sending a fallback instead.",
         friendly,
     ]
@@ -433,8 +433,8 @@ def test_process_user_message_with_langgraph(monkeypatch, sql_service):
 
     contents = [entry["content"] for entry in zulip.sent]
     assert contents == [  # noqa: S101
-        "Figuring out the best way to help...",
-        "Drafting a reply about how I work...",
+        "Figuring out the best way to help.",
+        "Drafting a reply about how I work.",
         "LangGraph reply",
     ]
     assert history.get("user@example.com")[-1]["parts"] == ["LangGraph reply"]  # noqa: S101
