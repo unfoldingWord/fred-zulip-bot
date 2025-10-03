@@ -22,7 +22,6 @@ DEFAULT_FALLBACK_MESSAGE = (
     "I'm having trouble responding right now. Please report this to my creators."
 )
 
-_SQL_PREPROCESS_HISTORY_LIMIT = 6
 _SQL_PREPROCESS_LOG_SNIPPET_LENGTH = 240
 
 _PROGRESS_CLASSIFY = "Figuring out the best way to help."
@@ -50,6 +49,7 @@ class ChatService:
         logger: Any,
         api_key: str,
         enable_langgraph: bool = False,
+        history_max_length: int = 7,
         primary_model: str = "gemini-2.5-pro",
         fallback_model: str = "gemini-2.5-flash",
     ) -> None:
@@ -63,6 +63,7 @@ class ChatService:
         self._primary_model = primary_model
         self._fallback_model = fallback_model
         self._graph_runner: Any | None = None
+        self._history_limit = max(history_max_length, 0)
 
         self._configure_genai(api_key)
 
@@ -522,7 +523,9 @@ class ChatService:
             if not parts:
                 continue
             relevant.append({"role": role, "parts": list(parts)})
-        return relevant[-_SQL_PREPROCESS_HISTORY_LIMIT:]
+        if not self._history_limit:
+            return relevant
+        return relevant[-self._history_limit :]
 
     @staticmethod
     def _history_to_text(history: Iterable[dict[str, Any]]) -> str:

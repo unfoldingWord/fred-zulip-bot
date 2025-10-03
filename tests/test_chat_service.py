@@ -140,6 +140,7 @@ def build_service(
         logger=logger,
         api_key="api-key",
         enable_langgraph=use_langgraph,
+        history_max_length=7,
     )
 
     service._test_ask_calls = call_log  # type: ignore[attr-defined]

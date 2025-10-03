@@ -84,6 +84,7 @@ def _build_services() -> dict[str, Any]:
         logger=logger,
         api_key=config.GENAI_API_KEY,
         enable_langgraph=config.ENABLE_LANGGRAPH,
+        history_max_length=max_length,
     )
 
     return {
