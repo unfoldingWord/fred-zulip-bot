@@ -55,7 +55,7 @@ PROMPTS_BY_INTENT = {
 def classify_intent(ask_fn: _AskFn) -> IntentType:
     """Return the intent enum using the provided LLM callback."""
 
-    response = ask_fn(INTENT_PROMPT, False)
+    response = ask_fn(INTENT_PROMPT, True)
     raw_text = getattr(response, "text", "")
     normalized = str(raw_text).strip().lower()
     try:

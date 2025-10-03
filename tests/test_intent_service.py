@@ -12,6 +12,7 @@ class DummyReply:
 
 def make_asker(result: str):
     def ask(prompt: str, use_history: bool) -> DummyReply:
+        assert use_history is True  # noqa: S101
         return DummyReply(result)
 
     return ask
