@@ -19,7 +19,9 @@ class IntentType(str, Enum):
 
 
 INTENT_PROMPT = (
-    "You are an intent classifier. A user has sent a message."
+    "You are an intent classifier. A user has sent a message. "
+    "Prioritize the user's most recent message when making your decision. "
+    "Use earlier chat history only when it helps resolve ambiguities or short follow-up requests. "
     "Your task is to classify their intent into one of the following categories:\n"
     "- query_fred: The user wants to query or access information from the database.\n"
     "- converse_with_fred_bot: The user is asking about the chatbot itself, like its purpose, name, capabilities, etc.\n"
