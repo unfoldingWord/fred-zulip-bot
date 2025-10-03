@@ -14,6 +14,7 @@ from fred_zulip_bot.adapters.zulip_client import ZulipClient
 from fred_zulip_bot.core.models import ChatRequest, ChatResponse, ZulipMessage
 from fred_zulip_bot.orchestration.graph import GraphState, build_chat_graph
 from fred_zulip_bot.services import intent_service
+from fred_zulip_bot.services.intent_service import IntentType
 from fred_zulip_bot.services.sql_service import SqlService
 
 
@@ -117,15 +118,15 @@ class ChatService:
         history: list[dict[str, Any]],
     ) -> str:
         intent = self.classify_intent(message)
-        self._logger.info("Intent classified as: %s", intent)
+        self._logger.info("Intent classified as: %s", intent.value)
 
-        if intent == "chatbot":
+        if intent is IntentType.CHATBOT:
             return self.handle_chatbot(message, history)
 
-        if intent == "other":
+        if intent is IntentType.OTHER:
             return self.handle_other(message, history)
 
-        if intent == "database":
+        if intent is IntentType.DATABASE:
             response_text, _, _ = self.handle_database(message, history)
             return response_text
 
@@ -157,13 +158,16 @@ class ChatService:
 
         return response
 
-    def classify_intent(self, message: ZulipMessage) -> str:
+    def classify_intent(self, message: ZulipMessage) -> IntentType:
         """Determine the user intent using the intent service."""
 
-        intent = intent_service.determine_intent(
-            lambda prompt, use_history: self._ask_model(message, prompt, use_history)
+        return intent_service.classify_intent(
+            lambda prompt, use_history: self._ask_model(
+                message,
+                prompt,
+                use_history,
+            )
         )
-        return intent
 
     def handle_chatbot(
         self,
