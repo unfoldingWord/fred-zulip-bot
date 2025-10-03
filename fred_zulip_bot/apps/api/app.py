@@ -9,7 +9,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import config
+from fred_zulip_bot.adapters.history_repo.base import HistoryRepository
 from fred_zulip_bot.adapters.history_repo.files_repo import FilesHistoryRepo
+from fred_zulip_bot.adapters.history_repo.tinydb_repo import TinyDbHistoryRepo
 from fred_zulip_bot.adapters.mysql_client import MySqlClient
 from fred_zulip_bot.adapters.zulip_client import ZulipClient
 from fred_zulip_bot.apps.api.routes.chat import register_chat_routes
@@ -42,9 +44,20 @@ def create_app() -> FastAPI:
 
 
 def _build_services() -> dict[str, Any]:
-    base_history_dir = Path("./data/chat_histories")
-    history_repo = FilesHistoryRepo(base_history_dir, logger=logger)
+    history_backend = (config.HISTORY_BACKEND or "tinydb").lower()
+    max_length = config.HISTORY_MAX_LENGTH or 20
     sql_service = SqlService()
+
+    history_repo: HistoryRepository
+    if history_backend == "files":
+        base_history_dir = Path(config.HISTORY_FILES_DIR)
+        history_repo = FilesHistoryRepo(base_history_dir, max_length=max_length, logger=logger)
+    else:
+        history_repo = TinyDbHistoryRepo(
+            Path(config.HISTORY_DB_PATH),
+            max_length=max_length,
+            logger=logger,
+        )
 
     if config.TEST_MODE:
         zulip_email = config.ZULIP_BOT_EMAIL_TEST or config.ZULIP_BOT_EMAIL

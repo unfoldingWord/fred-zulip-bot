@@ -137,5 +137,6 @@ cython_debug/
 .vscode/
 
 chat_histories/
+data/history.json
 
 .DS_Store

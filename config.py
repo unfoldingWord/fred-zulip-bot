@@ -22,6 +22,12 @@ class Config(BaseSettings):
     GENAI_API_KEY:str = Field(..., env="GENAI_API_KEY")
     ZULIP_AUTH_TOKEN:str = Field(..., env="ZULIP_AUTH_TOKEN")
 
+    # History storage configuration
+    HISTORY_BACKEND: str = Field("tinydb", env="HISTORY_BACKEND")
+    HISTORY_DB_PATH: str = Field("./data/history.json", env="HISTORY_DB_PATH")
+    HISTORY_FILES_DIR: str = Field("./data/chat_histories", env="HISTORY_FILES_DIR")
+    HISTORY_MAX_LENGTH: int = Field(20, env="HISTORY_MAX_LENGTH")
+
     class Config:
         env_file = "./.env"
 
