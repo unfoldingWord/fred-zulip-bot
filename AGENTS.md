@@ -4,6 +4,32 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
 
 ---
 
+
+## Doctrine (Non-Negotiables & Defaults)
+
+**Principles**
+- Small, reviewable PRs; keep `main` releasable; prefer clarity over cleverness.
+- Boundaries: `api → domain → adapters` (no back edges).
+
+**Policies (must)**
+- Pre-commit must pass: `ruff --fix`, `ruff format`, `mypy`.
+- Tests required for behavior changes; CI coverage ≥ project floor; no new flaky tests.
+- Security: no secrets in repo; Bandit/pip-audit clean or justified.
+- Architecture: import-linter contracts pass (or exception PR with rationale).
+
+**Defaults (should)**
+- Precise typing at boundaries (`TypedDict`, `Protocol`, `Annotated`); avoid `Any`.
+- Prefer composition over inheritance; keep functions small & single-purpose.
+- Log meaningful context on error paths (no PII; include correlation IDs if available).
+
+**Escape hatches**
+- If a rule blocks delivery: narrow the ignore, add an inline rationale, open a follow-up issue, and explain in the PR body.
+
+**Escalate to human review when**
+- Changing boundaries, adding external I/O, handling auth/security, or touching perf-critical code.
+
+---
+
 ## Global Constraints & Conventions
 
 - **Python:** 3.13 only (`requires-python >= 3.13`).
@@ -16,8 +42,6 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
 - **Local Checks Before Every Commit (non-negotiable):** run `ruff check fred_zulip_bot tests`,
   `ruff format --check fred_zulip_bot tests`, `mypy fred_zulip_bot`, and `pytest`. Pre-commit hooks
   will fail if you forget, but you must run them manually first.
-- **Match CI Dependencies:** Always install both `requirements.txt` and `requirements-dev.txt`
-  before running the checks so mypy/pytest exercise the same dependency graph that CI uses.
 - **Messages:** **Never** commit with an empty description—subject **and** body are required.
 
 ---
@@ -301,4 +325,4 @@ plans, tests, and PR notes. Human reviewers can use the bullets as review heuris
   Introduce Parameter Object, etc.) in the PR body.
 - *The Pragmatic Programmer (20th Anniversary) — Hunt & Thomas* — Automate the boring
   (pre-commit, formatters), orthogonalize concerns (services vs. adapters), and leave a “tracer
-  bullet” (minimal vertical slice) before scaling up a feature.
+  bullet” (minimal vertical slice) before scaling up a feature).
