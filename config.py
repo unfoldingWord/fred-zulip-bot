@@ -31,7 +31,7 @@ class Config(BaseSettings):
     HISTORY_DB_PATH: str = "./data/history.json"
     HISTORY_FILES_DIR: str = "./data/chat_histories"
     HISTORY_MAX_LENGTH: int = 20
-    ENABLE_LANGGRAPH: bool = False
+    ENABLE_LANGGRAPH: bool = True
 
 
 config = Config()  # type: ignore[call-arg]
