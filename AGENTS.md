@@ -220,6 +220,8 @@ test plan:
 # One-time
 pre-commit install
 
+> **Non-negotiable:** Every new Codex session starts with a fresh `.git/hooks` directory. Run `pre-commit install` (or `.venv/bin/pre-commit install` if you prefer the explicit venv path) as the very first setup step so formatting, lint, and mypy hooks always fire before commits.
+
 # Full checks
 ruff check . && ruff format --check . && mypy fred_zulip_bot && pytest -q
 bandit -q -r fred_zulip_bot
