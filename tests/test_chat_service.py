@@ -78,6 +78,7 @@ def build_service(
     chatbot_reply: str | None = None,
     other_reply: str | None = None,
     sql_text: str | None = None,
+    sql_rewrite_text: str | None = None,
     db_result: str = "rows",
     summary_text: str | None = None,
     use_langgraph: bool = False,
@@ -92,16 +93,35 @@ def build_service(
         mapping[intent_service.OTHER_PROMPT] = other_reply
     if sql_text is not None:
         mapping[sql_service.sql_prompt] = sql_text
+    if sql_rewrite_text is not None:
+        mapping[sql_service.sql_rewrite_prompt] = sql_rewrite_text
     if summary_text is not None:
         mapping[sql_service.answer_prompt] = summary_text
 
+    call_log: list[dict[str, Any]] = []
+
     def fake_ask_model(
-        self, message, prompt, use_history, *, model_override=None, allow_fallback=True
+        self,
+        message,
+        prompt,
+        use_history,
+        *,
+        model_override=None,
+        allow_fallback=True,
+        generation_config=None,
     ):  # type: ignore[override]
         try:
             text = mapping[prompt]
         except KeyError as exc:  # pragma: no cover - guard
             raise AssertionError(f"Unexpected prompt: {prompt!r}") from exc
+        call_log.append(
+            {
+                "prompt": prompt,
+                "content": message.content,
+                "use_history": use_history,
+                "generation_config": dict(generation_config) if generation_config else None,
+            }
+        )
         return DummyReply(text)
 
     monkeypatch.setattr(ChatService, "_ask_model", fake_ask_model)
@@ -121,6 +141,8 @@ def build_service(
         api_key="api-key",
         enable_langgraph=use_langgraph,
     )
+
+    service._test_ask_calls = call_log  # type: ignore[attr-defined]
 
     return service, fake_zulip, fake_history, fake_mysql, logger
 
@@ -156,7 +178,7 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
         monkeypatch,
         sql_service,
         intent_label="query_fred",
-        sql_text="SELECT 1",
+        sql_text='{"sql": "SELECT 1"}',
         db_result="(1,)",
         summary_text="There is one result.",
     )
@@ -169,6 +191,67 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
     parts_list = [entry.get("parts") for entry in saved if entry.get("parts")]
     assert parts_list[-1] == ["There is one result."]  # noqa: S101
     assert all("SELECT" not in parts[0] for parts in parts_list)  # noqa: S101
+
+
+def test_query_fred_preprocesses_follow_up(monkeypatch, sql_service):
+    rewrite_json = '{"rewritten_request": "List the translation projects in Maryland."}'
+    sql_json = '{"sql": "SELECT * FROM projects WHERE state = \'Maryland\'"}'
+
+    service, _, _, mysql, logger = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="query_fred",
+        sql_rewrite_text=rewrite_json,
+        sql_text=sql_json,
+        db_result="rows",
+        summary_text="Summarized",
+    )
+
+    history_entries = [
+        {"role": "user", "parts": ["What are all the translation projects in Virginia?"]},
+        {"role": "model", "parts": ["Previously answered"]},
+        {"role": "user", "parts": ["and in Maryland?"]},
+    ]
+    message = ZulipMessage(
+        content="and in Maryland?",
+        display_recipient="stream",
+        sender_email="user@example.com",
+        subject="topic",
+        type="stream",
+    )
+
+    response_text, sql_text, db_data = service.query_fred(message, history_entries)
+
+    expected_sql = "SELECT * FROM projects WHERE state = 'Maryland'"
+    assert mysql.last_query == expected_sql  # noqa: S101
+    assert sql_text == expected_sql  # noqa: S101
+    assert db_data == "rows"  # noqa: S101
+    assert response_text == "Summarized"  # noqa: S101
+
+    before_entry = next(
+        entry for entry in logger.infos if entry[0].startswith("SQL preprocess before")
+    )
+    assert before_entry[1][0] == 2  # noqa: S101
+
+    after_entry = next(
+        entry for entry in logger.infos if entry[0].startswith("SQL preprocess after")
+    )
+    assert after_entry[1][0] is True  # noqa: S101
+
+    ask_calls = service._test_ask_calls
+    assert ask_calls[0]["prompt"] == sql_service.sql_rewrite_prompt  # noqa: S101
+    assert "Conversation history" in ask_calls[0]["content"]  # noqa: S101
+    assert ask_calls[0]["use_history"] is False  # noqa: S101
+    assert ask_calls[0]["generation_config"]["response_mime_type"] == "application/json"  # noqa: S101
+
+    assert ask_calls[1]["prompt"] == sql_service.sql_prompt  # noqa: S101
+    assert ask_calls[1]["content"] == "List the translation projects in Maryland."  # noqa: S101
+    assert ask_calls[1]["use_history"] is False  # noqa: S101
+    schema = ask_calls[1]["generation_config"]["response_schema"]
+    assert schema == sql_service.sql_generation_schema  # noqa: S101
+
+    assert ask_calls[2]["prompt"] == sql_service.answer_prompt  # noqa: S101
+    assert ask_calls[2]["generation_config"] is None  # noqa: S101
 
 
 def test_process_user_message_other(monkeypatch, sql_service):
@@ -208,7 +291,7 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
         monkeypatch,
         sql_service,
         intent_label="query_fred",
-        sql_text="SELECT name",
+        sql_text='{"sql": "SELECT name"}',
         db_result="salvage",
         summary_text="Use fallback",
     )
@@ -228,7 +311,7 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
         monkeypatch,
         sql_service,
         intent_label="query_fred",
-        sql_text="Not SQL",
+        sql_text='{"sql": "Not SQL"}',
         summary_text="unused",
     )
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any, Final
 
 SQL_ALLOW_PREFIX = "SELECT"
 DENY_PATTERN = re.compile(
@@ -26,12 +27,32 @@ class SqlService:
 
         self.sql_prompt = (
             "You are an SQL assistant.You will generate SQL queries based on the the user's request and the database information that was given to you."
-            "Only return the SQL query — no explanation, no Markdown, no code block formatting."
+            "Only return the SQL query as JSON — no explanation, no Markdown, no code block formatting."
+            "The JSON object must contain a single field named sql whose value is the generated SELECT statement."
             "You are a read-only assistant. Under no circumstances should you ever modify the database."
             "If the user asks you to do so, inform them that you are not able to do that. \n"
             f"Here is the database schema: \n{database_context}"
             f"Here are rules you must adhere to when creating sql queries: \n{system_rules}"
         )
+
+        self.sql_rewrite_prompt = (
+            "You rewrite follow-up database questions into a single, self-contained request for SQL generation."
+            "You will receive the conversation history (oldest first) and the latest user message."
+            "Return a JSON object with a rewritten_request field that restates the user's latest ask."
+            "Preserve every filter, time period, entity, or constraint implied by the conversation."
+            "Do not invent new requirements."
+        )
+
+        self.sql_generation_schema: Final[dict[str, Any]] = {
+            "type": "object",
+            "properties": {"sql": {"type": "string"}},
+            "required": ["sql"],
+        }
+        self.sql_rewrite_schema: Final[dict[str, Any]] = {
+            "type": "object",
+            "properties": {"rewritten_request": {"type": "string"}},
+            "required": ["rewritten_request"],
+        }
 
         self.answer_prompt = (
             "You are a data summarizer. The user asked a question and you've been given the raw SQL result."

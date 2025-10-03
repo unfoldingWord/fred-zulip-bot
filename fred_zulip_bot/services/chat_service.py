@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+import json
+from collections.abc import Callable, Iterable
+from typing import Any, cast
 
 import google.generativeai as genai
 from fastapi import BackgroundTasks, HTTPException
@@ -20,6 +21,9 @@ from fred_zulip_bot.services.sql_service import SqlService
 DEFAULT_FALLBACK_MESSAGE = (
     "I'm having trouble responding right now. Please report this to my creators."
 )
+
+_SQL_PREPROCESS_HISTORY_LIMIT = 6
+_SQL_PREPROCESS_LOG_SNIPPET_LENGTH = 240
 
 
 class ChatService:
@@ -227,10 +231,18 @@ class ChatService:
     ) -> tuple[str, str, str]:
         """Generate SQL, execute it, and summarize the result."""
 
-        sql_text = self._ask_model_text(
-            message,
+        rewritten_message_text = self._preprocess_for_sql_transform(message, history)
+        sql_request_message = message.model_copy(update={"content": rewritten_message_text})
+        sql_payload = self._ask_model_json(
+            sql_request_message,
             self._sql_service.sql_prompt,
+            use_history=False,
+            schema=self._sql_service.sql_generation_schema,
         )
+
+        sql_text = str(sql_payload.get("sql", "")).strip()
+        if not sql_text:
+            raise ValueError("no sql returned")
 
         self._logger.info("SQL generated: %s", sql_text)
 
@@ -273,6 +285,74 @@ class ChatService:
         self._history_repo.save(message.sender_email, history)
 
         return answer_text, sql_text, database_data
+
+    def _preprocess_for_sql_transform(
+        self,
+        message: ZulipMessage,
+        history: list[dict[str, Any]],
+    ) -> str:
+        relevant_history = self._extract_relevant_history_entries(history)
+        without_latest = list(relevant_history)
+        if without_latest and without_latest[-1].get("role") == "user":
+            latest_parts = without_latest[-1].get("parts", [])
+            if len(latest_parts) == 1 and latest_parts[0] == message.content:
+                without_latest = without_latest[:-1]
+
+        history_text = self._history_to_text(without_latest)
+        history_snippet = self._truncate_for_log(history_text)
+
+        self._logger.info(
+            "SQL preprocess before: history_turns=%s latest_message=%r history_snippet=%r",
+            len(without_latest),
+            self._truncate_for_log(message.content),
+            history_snippet,
+        )
+
+        if not history_text:
+            self._logger.info(
+                "SQL preprocess after: rewrite_applied=False reason=no_relevant_history",
+            )
+            return message.content
+
+        rewrite_input = (
+            "Conversation history (oldest to newest):\n"
+            f"{history_text}\n\n"
+            "Latest user message:\n"
+            f"{message.content}"
+        )
+        rewrite_message = message.model_copy(update={"content": rewrite_input})
+
+        try:
+            rewrite_payload = self._ask_model_json(
+                rewrite_message,
+                self._sql_service.sql_rewrite_prompt,
+                use_history=False,
+                schema=self._sql_service.sql_rewrite_schema,
+            )
+        except Exception:
+            self._logger.error(
+                "SQL preprocess after: rewrite_applied=False reason=rewrite_failed",
+                exc_info=True,
+            )
+            return message.content
+
+        rewritten_request = str(rewrite_payload.get("rewritten_request", "")).strip()
+        if not rewritten_request:
+            self._logger.info(
+                "SQL preprocess after: rewrite_applied=False reason=empty_rewrite",
+            )
+            return message.content
+
+        rewritten_snippet = self._truncate_for_log(rewritten_request)
+        rewrite_applied = rewritten_request != message.content
+
+        self._logger.info(
+            "SQL preprocess after: rewrite_applied=%s rewritten_message=%r",
+            rewrite_applied,
+            rewritten_snippet,
+        )
+
+        return rewritten_request
 
     def _deliver_response(
         self,
@@ -318,12 +398,17 @@ class ChatService:
         *,
         model_override: str | None = None,
         allow_fallback: bool = True,
+        generation_config: dict[str, Any] | None = None,
     ) -> Any:
         model_name = model_override or self._primary_model
         history = self._history_repo.get(message.sender_email) if use_history else None
 
         try:
-            model = self._create_model(model_name=model_name, prompt=prompt)
+            model = self._create_model(
+                model_name=model_name,
+                prompt=prompt,
+                generation_config=generation_config,
+            )
 
             if history:
                 chat_session: Any = model.start_chat(history=history)
@@ -348,6 +433,7 @@ class ChatService:
                     use_history,
                     model_override=self._fallback_model,
                     allow_fallback=False,
+                    generation_config=generation_config,
                 )
 
             raise HTTPException(status_code=500, detail="Gemini model failed") from None
@@ -365,6 +451,72 @@ class ChatService:
             return text
         raise ValueError("no text returned")
 
+    def _ask_model_json(
+        self,
+        message: ZulipMessage,
+        prompt: str,
+        *,
+        schema: dict[str, Any],
+        use_history: bool = True,
+    ) -> dict[str, Any]:
+        generation_config = {
+            "response_mime_type": "application/json",
+            "response_schema": schema,
+        }
+        response = self._ask_model(
+            message,
+            prompt,
+            use_history,
+            generation_config=generation_config,
+        )
+        text = getattr(response, "text", None)
+        if not isinstance(text, str):
+            raise ValueError("no json text returned")
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+            raise ValueError("invalid json returned") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("invalid json returned")
+        return cast(dict[str, Any], parsed)
+
+    def _extract_relevant_history_entries(
+        self,
+        history: Iterable[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        relevant: list[dict[str, Any]] = []
+        for entry in history:
+            role = entry.get("role")
+            parts = entry.get("parts")
+            if role not in {"user", "model"}:
+                continue
+            if not parts:
+                continue
+            relevant.append({"role": role, "parts": list(parts)})
+        return relevant[-_SQL_PREPROCESS_HISTORY_LIMIT:]
+
+    @staticmethod
+    def _history_to_text(history: Iterable[dict[str, Any]]) -> str:
+        lines: list[str] = []
+        for entry in history:
+            role = entry.get("role", "unknown")
+            label = "assistant" if role == "model" else role
+            parts = entry.get("parts", [])
+            if not parts:
+                continue
+            text_parts = [str(part) for part in parts if part]
+            if not text_parts:
+                continue
+            lines.append(f"{label}: {' '.join(text_parts)}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _truncate_for_log(value: str, limit: int = _SQL_PREPROCESS_LOG_SNIPPET_LENGTH) -> str:
+        stripped = value.strip()
+        if len(stripped) <= limit:
+            return stripped
+        return f"{stripped[:limit]}…"
+
     def _configure_genai(self, api_key: str) -> None:
         configure = getattr(genai, "configure", None)
         if not callable(configure):  # pragma: no cover - defensive guard
@@ -372,10 +524,20 @@ class ChatService:
 
         configure(api_key=api_key)
 
-    def _create_model(self, *, model_name: str, prompt: str) -> Any:
+    def _create_model(
+        self,
+        *,
+        model_name: str,
+        prompt: str,
+        generation_config: dict[str, Any] | None = None,
+    ) -> Any:
         factory_candidate = getattr(genai, "GenerativeModel", None)
         if not callable(factory_candidate):  # pragma: no cover - defensive guard
             raise RuntimeError("google.generativeai.GenerativeModel is unavailable")
 
         factory: Callable[..., Any] = factory_candidate
-        return factory(model_name=model_name, system_instruction=prompt)
+        return factory(
+            model_name=model_name,
+            system_instruction=prompt,
+            generation_config=generation_config,
+        )
