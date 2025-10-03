@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Protocol
 
 
 class _AskFn(Protocol):
     def __call__(self, prompt: str, use_history: bool) -> object: ...
+
+
+class IntentType(str, Enum):
+    """Supported intent labels for the chat assistant."""
+
+    DATABASE = "database"
+    CHATBOT = "chatbot"
+    OTHER = "other"
 
 
 INTENT_PROMPT = (
@@ -37,11 +46,19 @@ OTHER_PROMPT = (
     "language. The user has asked something of you that is an unsupported function of this chatbot. Kindly explain"
     "to the user that you can't help them with that, and redirect them by informing them of things you can do."
 )
+PROMPTS_BY_INTENT = {
+    IntentType.CHATBOT: CHATBOT_PROMPT,
+    IntentType.OTHER: OTHER_PROMPT,
+}
 
 
-def determine_intent(ask_fn: _AskFn) -> str:
-    """Return the lowercase intent label using the provided LLM callback."""
+def classify_intent(ask_fn: _AskFn) -> IntentType:
+    """Return the intent enum using the provided LLM callback."""
 
     response = ask_fn(INTENT_PROMPT, False)
-    text = getattr(response, "text", "")
-    return text.strip().lower()
+    raw_text = getattr(response, "text", "")
+    normalized = str(raw_text).strip().lower()
+    try:
+        return IntentType(normalized)
+    except ValueError:
+        return IntentType.OTHER

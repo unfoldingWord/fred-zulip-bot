@@ -7,6 +7,7 @@ from types import ModuleType
 from typing import Any, Protocol, TypedDict, cast
 
 from fred_zulip_bot.core.models import ChatRequest, ZulipMessage
+from fred_zulip_bot.services.intent_service import IntentType
 
 try:
     LANGGRAPH_GRAPH: ModuleType = import_module("langgraph.graph")
@@ -20,7 +21,7 @@ StateGraph: Any = LANGGRAPH_GRAPH.StateGraph
 class ChatGraphService(Protocol):
     """Interface required by the LangGraph orchestration builder."""
 
-    def classify_intent(self, message: ZulipMessage) -> str: ...
+    def classify_intent(self, message: ZulipMessage) -> IntentType: ...
 
     def handle_chatbot(
         self,
@@ -46,7 +47,7 @@ class GraphState(TypedDict, total=False):
 
     request: ChatRequest
     history: list[dict[str, Any]]
-    intent: str | None
+    intent: IntentType | None
     sql: str | None
     result: str | None
     response: str | None
@@ -66,16 +67,18 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
     def classify_intent_node(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         intent = chat_service.classify_intent(request.message)
-        logger.info("LangGraph node=classify_intent intent=%s", intent)
+        logger.info("LangGraph node=classify_intent intent=%s", intent.value)
         return {"intent": intent}
 
     def route_intent(state: GraphState) -> str:
         intent = state.get("intent")
+        if isinstance(intent, IntentType):
+            return intent.value
         if isinstance(intent, str):
             cleaned = intent.strip().lower()
-            if cleaned in {"chatbot", "other", "database"}:
+            if cleaned in {item.value for item in IntentType}:
                 return cleaned
-        return "other"
+        return IntentType.OTHER.value
 
     def chatbot_node(state: GraphState) -> dict[str, Any]:
         request = state["request"]
@@ -115,9 +118,9 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
         "classify_intent",
         route_intent,
         {
-            "chatbot": "chatbot",
-            "other": "other",
-            "database": "database",
+            IntentType.CHATBOT.value: "chatbot",
+            IntentType.OTHER.value: "other",
+            IntentType.DATABASE.value: "database",
         },
     )
     graph.add_edge("chatbot", END)
