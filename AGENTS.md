@@ -240,3 +240,63 @@ Wire the minimal LangGraph; ensure nodes remain thin and call services.
 - Coverage on changed files ≥ threshold.
 - No secrets in diffs; config via `core/config.py` only.
 - Commit message with **non-empty body**; PR description includes “what/why/test plan”.
+
+---
+
+## Required Reading (Modern Classics & How to Apply Here)
+
+These titles encode the “why” behind our guardrails. Agents should lift concrete practices into
+plans, tests, and PR notes. Human reviewers can use the bullets as review heuristics.
+
+**Python craft (daily impact)**
+- *Effective Python (3e, 2024) — Slatkin* — Prefer built-ins and idioms Ruff already nudges
+  (iterators, context managers, dataclass/slots when appropriate). Make small, composable
+  functions; use precise types (TypedDict, Protocol, Annotated) at boundaries. When refactoring,
+  consult relevant “Items” and note which ones guided the change in the PR body.
+- *Fluent Python (2e, 2022) — Ramalho* — Embrace the data model (dunder methods) for clarity; use
+  iterators/generators over index loops; lean on protocols and structural typing to decouple
+  services from adapters. Prefer collections.abc interfaces in signatures.
+- *Architecture Patterns with Python (“Cosmic Python”, 2020) — Percival & Gregory* — Keep routes
+  thin, put business rules in services/domain, talk to the world via adapters (ports & adapters).
+  Model workflows explicitly (e.g., LangGraph nodes call services, not vice-versa). Capture
+  decisions in tests.
+- *Python Testing with pytest (2e, 2022) — Okken* — Use fixtures/parametrization to express
+  behavior, not mechanics. For each change: one happy path, one edge path, one error path. Prefer
+  fakes over mocks for adapters. Keep `--cov-fail-under` green and raise slowly.
+- *High Performance Python (2e, 2020) — Gorelick & Ozsvald* — Profile before optimizing. Prefer
+  vectorized/streaming approaches for data transforms; avoid accidental N+1 I/O in adapters;
+  measure with timers in observability.
+- *Python Concurrency with asyncio (2022) — M. Fowler* — If an endpoint is async, keep the chain
+  async (http/db clients). Don’t block the loop; offload CPU work; set timeouts and backoffs in
+  adapters.
+
+**Architecture, delivery, and team flow**
+- *Accelerate — Forsgren, Humble, Kim* — Treat our CI gates as fitness functions for lead time and
+  change fail rate. Keep PRs small; keep the main branch always releasable. If a change increases
+  MTTR risk, add observability and rollback notes.
+- *Software Engineering at Google — Winters, Manshreck, Wright* — Bias to readability and
+  long-term maintainability. Enforce style mechanically (Ruff/formatter), keep code review focused
+  on design and clarity. Prefer clear interfaces over cleverness.
+- *Team Topologies — Skelton & Pais* — Reflect team boundaries in code boundaries. Use import-linter
+  contracts to keep api → domain → adapters flow clean; raise a ticket if work crosses multiple
+  “streams.”
+- *Building Evolutionary Architectures (2e) — Ford, Parsons, Kua* — Promote non-functional goals to
+  first-class tests: lint/type/test/security gates, basic latency budgets, error-rate SLOs. When
+  adding a new quality goal, encode it in CI (a new check) rather than tribal knowledge.
+- *Software Architecture: The Hard Parts — Ford et al.* — Be explicit about trade-offs (consistency
+  vs. autonomy, sync vs. async). In PRs that change boundaries, include a short “trade-off” note
+  and why this repo tilts that way.
+- *Fundamentals of Software Architecture — Richards & Ford* — Make coupling/cohesion visible.
+  Prefer stable interfaces and unstable implementations; when churn grows, extract modules/services
+  rather than adding feature flags everywhere.
+- *A Philosophy of Software Design (2e) — Ousterhout* — Create deep modules that eliminate
+  complexity for callers. If a function/class leaks decisions outward, refactor until the interface
+  is simpler than the implementation.
+
+**Design, refactoring, and craft**
+- *Refactoring (2e) — Fowler* — Small, behavior-preserving steps with tests. When reducing
+  complexity (e.g., failing PLR0915 limits), list the named refactorings used (Extract Function,
+  Introduce Parameter Object, etc.) in the PR body.
+- *The Pragmatic Programmer (20th Anniversary) — Hunt & Thomas* — Automate the boring
+  (pre-commit, formatters), orthogonalize concerns (services vs. adapters), and leave a “tracer
+  bullet” (minimal vertical slice) before scaling up a feature.
