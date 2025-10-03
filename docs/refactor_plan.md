@@ -33,12 +33,10 @@ fred_zulip_bot/
   adapters/mysql_client.py       # read-only MySQL client (submit_query)
   adapters/history_repo/
     base.py                      # HistoryRepository protocol
-    tinydb_repo.py               # default impl
-    files_repo.py                # legacy/migration impl
+    tinydb_repo.py               # TinyDB implementation
   core/config.py                 # pydantic-settings for env/paths/urls
   core/logging.py                # logger factory (json, levels)
   core/models.py                 # Pydantic DTOs: ChatRequest, ChatResponse, ZulipMessage
-  tools/migrate_history_to_tinydb.py
   tests/
     unit/
       test_sql_safety.py
@@ -244,12 +242,7 @@ fred_zulip_bot/
           # Validate via sql_service.is_safe_sql()
           ...
   ```
-- History helpers → `adapters/history_repo/files_repo.py` (temporary until Phase 3).
-  ```py
-  class FilesHistoryRepo(HistoryRepository):
-      def get(self, email: str) -> list[dict]: ...
-      def save(self, email: str, history: list[dict]) -> None: ...
-  ```
+- History helpers → `adapters/history_repo/tinydb_repo.py`.
 - Prompts/constants → `services/intent_service.py` + `services/sql_service.py`.
 - Main flow → `services/chat_service.py` (≤ 40–60 LOC helpers).
   ```py
@@ -265,7 +258,7 @@ fred_zulip_bot/
   ```py
   app.state.services = {
       "zulip_client": ZulipClient(...from settings...),
-      "history_repo": FilesHistoryRepo(...),
+      "history_repo": TinyDbHistoryRepo(...),
       "sql_client": MySqlClient(...),    # optional until DB used
       "llm_client": GeminiClient(...),   # or placeholder
       "logger": make_logger(settings),
@@ -301,14 +294,13 @@ fred_zulip_bot/
       def get(self, email: str) -> list[dict]: ...
       def save(self, email: str, history: list[dict]) -> None: ...
   ```
-- `tools/migrate_history_to_tinydb.py` (one-shot): read `./data/chat_histories/*.json` → write to TinyDB with key `<user_email>`.
+- Remove the legacy file-system adapter and persist exclusively to TinyDB.
 
 **Settings**
 - `core/config.py` provides `HISTORY_DB_PATH`.
 
 **Acceptance**
-- Migration logs counts and sample keys.
-- New writes/read go to TinyDB; legacy adapter remains available behind config flag for quick rollback.
+- New writes/read go to TinyDB; file-based storage is removed to keep the surface small.
 
 ---
 
@@ -341,7 +333,7 @@ fred_zulip_bot/
   ```
 
 **Feature flag**
-- `ENABLE_LANGGRAPH=true` to switch on; default off for safe rollout.
+- `ENABLE_LANGGRAPH` defaults to `true`; set it to `false` locally when you need to bypass the graph.
 
 **Acceptance**
 - With flag off: parity with Phase 2.
@@ -433,7 +425,7 @@ def is_safe_sql(sql: str) -> bool:
       zulip_api_key: str
       mysql_dsn: str | None = None
       history_db_path: str = "./data/history.json"
-      enable_langgraph: bool = False
+      enable_langgraph: bool = True
   ```
 
 ---
@@ -443,7 +435,7 @@ def is_safe_sql(sql: str) -> bool:
 1. `chore/py313-tooling` → install/lint/type/test base (no behavior changes).
 2. `refactor/app-factory` → app factory + routers; main shim.
 3. `refactor/services-adapters` → extract services/adapters with parity.
-4. `feat/tinydb-history` → repo swap + migration tool.
+4. `feat/tinydb-history` → swap to TinyDB only; remove filesystem adapter.
 5. `feat/langgraph-orchestration` → graph behind flag.
 6. `feat/intent-enum` → typed intents; examples centralized.
 7. `ci/strict-gates` → ratchet coverage; enforce gates.
@@ -465,15 +457,14 @@ uvicorn fred_zulip_bot.apps.api.app:create_app --factory --reload --port 8000
 # Quality
 ruff check . && ruff format --check . && mypy fred_zulip_bot && pytest -q
 
-# Migrate history
-python tools/migrate_history_to_tinydb.py
+# LangGraph toggle
+ENABLE_LANGGRAPH=false uvicorn fred_zulip_bot.apps.api.app:create_app --factory --reload --port 8000
 ```
 
 ---
 
 ## Rollback & Risk Notes
 
-- Keep legacy `files_repo` and a settings switch for history backend for quick revert.
 - LangGraph stays feature-flagged until confidence is high.
 - DB access remains read-only; no credentialed write path in container image.
 - If Windows import issues reappear, verify platform markers and optional imports.

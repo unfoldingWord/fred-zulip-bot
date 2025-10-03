@@ -217,7 +217,7 @@ class ChatService:
         database_data = self._mysql_client.select(sql_text)
 
         if database_data != "salvage":
-            history.append({"role": "model", "parts": [database_data]})
+            self._logger.info("SQL result captured rows=%s", database_data[:200])
             summary_content = (
                 f"The SQL query returned {database_data}. "
                 "Answer the user's question using this data."

@@ -126,8 +126,7 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
   - Parameterize queries; block multi-statements; deny dangerous tokens (see SQL Safety).
   - Prefer connection pooling; set sane timeouts.
 - **History (`TinyDBHistoryRepository`)**
-  - Default storage for chat histories keyed by user email.
-  - Migration tool ports legacy JSON → TinyDB; keep `files_repo` fallback.
+  - Persist chat histories in TinyDB keyed by user email; the filesystem adapter has been removed.
 - **LLM (Gemini adapter)**
   - Single place for prompts, model name, timeouts, retries.
   - No raw SDK calls from services; all via adapter methods.
@@ -176,9 +175,8 @@ tests/
 - Centralize in `core/config.py` using `pydantic-settings`.
 - Load from env / `.env`. Never read secrets from code defaults.
 - All external clients (`ZulipClient`, `MySqlClient`, LLM) receive config via DI.
-- History storage defaults to TinyDB (`HISTORY_BACKEND=tinydb`); switch to filesystem with
-  `HISTORY_BACKEND=files`. Configure paths via `HISTORY_DB_PATH` / `HISTORY_FILES_DIR` and keep
-  `HISTORY_MAX_LENGTH` consistent with migrations.
+- History storage uses TinyDB only. Configure the path via `HISTORY_DB_PATH` and adjust
+  `HISTORY_MAX_LENGTH` to cap retained turns.
 
 ---
 

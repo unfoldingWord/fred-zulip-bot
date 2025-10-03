@@ -27,9 +27,7 @@ class Config(BaseSettings):
     ZULIP_AUTH_TOKEN: str
 
     # History storage configuration
-    HISTORY_BACKEND: str = "tinydb"
     HISTORY_DB_PATH: str = "./data/history.json"
-    HISTORY_FILES_DIR: str = "./data/chat_histories"
     HISTORY_MAX_LENGTH: int = 20
     ENABLE_LANGGRAPH: bool = True
 
