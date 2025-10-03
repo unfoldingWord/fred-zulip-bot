@@ -168,7 +168,12 @@ def test_process_user_message_chatbot(monkeypatch, sql_service):
 
     service.process_user_message(make_request("hi"))
 
-    assert zulip.sent[0]["content"] == "Hello there"  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Drafting a reply about how I work.",
+        "Hello there",
+    ]
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == ["Hello there"]  # noqa: S101
 
@@ -185,8 +190,14 @@ def test_process_user_message_database_flow(monkeypatch, sql_service):
 
     service.process_user_message(make_request("how many?"))
 
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
+        "I have the data - summarizing it for you now...",
+        "There is one result.",
+    ]
     assert mysql.last_query == "SELECT 1"  # noqa: S101
-    assert zulip.sent[0]["content"] == "There is one result."  # noqa: S101
     saved = history.get("user@example.com")
     parts_list = [entry.get("parts") for entry in saved if entry.get("parts")]
     assert parts_list[-1] == ["There is one result."]  # noqa: S101
@@ -264,7 +275,12 @@ def test_process_user_message_other(monkeypatch, sql_service):
 
     service.process_user_message(make_request("other question"))
 
-    assert zulip.sent[0]["content"] == "Cannot help"  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Working on a helpful explanation since I can't do that directly.",
+        "Cannot help",
+    ]
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == ["Cannot help"]  # noqa: S101
 
@@ -286,6 +302,21 @@ def test_handle_chat_request_rejects_invalid_token(monkeypatch, sql_service):
     assert exc.value.status_code == 401  # noqa: S101
 
 
+def test_handle_chat_request_sends_ack(monkeypatch, sql_service):
+    service, zulip, _, _, _ = build_service(
+        monkeypatch,
+        sql_service,
+        intent_label="converse_with_fred_bot",
+        chatbot_reply="unused",
+    )
+
+    request = make_request("hi")
+
+    service.handle_chat_request(request, BackgroundTasks())
+
+    assert zulip.sent[0]["content"] == "thinking..."  # noqa: S101
+
+
 def test_process_user_message_database_salvage(monkeypatch, sql_service):
     service, zulip, history, mysql, _ = build_service(
         monkeypatch,
@@ -299,7 +330,13 @@ def test_process_user_message_database_salvage(monkeypatch, sql_service):
     service.process_user_message(make_request("fallback?"))
 
     assert mysql.last_query == "SELECT name"  # noqa: S101
-    assert zulip.sent[0]["content"] == "Use fallback"  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
+        "I have the data - summarizing it for you now...",
+        "Use fallback",
+    ]
     saved = history.get("user@example.com")
     parts_list = [entry.get("parts") for entry in saved if entry.get("parts")]
     assert parts_list[-1] == ["Use fallback"]  # noqa: S101
@@ -320,7 +357,13 @@ def test_process_user_message_unsafe_sql(monkeypatch, sql_service):
     service.process_user_message(make_request("unsafe"))
 
     friendly = DEFAULT_FALLBACK_MESSAGE
-    assert zulip.sent[0]["content"] == friendly  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Checking the database for the details you asked about.",
+        "That request looked unsafe, so I'm sending a fallback instead.",
+        friendly,
+    ]
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == [friendly]  # noqa: S101
     assert not hasattr(mysql, "last_query")  # noqa: S101
@@ -341,7 +384,8 @@ def test_process_user_message_failure_sends_fallback(monkeypatch, sql_service):
 
     service.process_user_message(make_request("hi"))
 
-    assert zulip.sent[0]["content"] == DEFAULT_FALLBACK_MESSAGE  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [DEFAULT_FALLBACK_MESSAGE]  # noqa: S101
     saved = history.get("user@example.com")
     assert saved[-1]["parts"] == [DEFAULT_FALLBACK_MESSAGE]  # noqa: S101
     assert any("Processing user message failed" in entry[0] for entry in logger.errors)  # noqa: S101
@@ -356,11 +400,11 @@ def test_process_user_message_retries_on_send_failure(monkeypatch, sql_service):
     )
 
     attempts: list[dict[str, Any]] = []
-    call_count = {"value": 0}
+    failed_final = {"value": False}
 
     def flaky_send(**kwargs: Any) -> None:
-        call_count["value"] += 1
-        if call_count["value"] == 1:
+        if kwargs.get("content") == "Hello" and not failed_final["value"]:
+            failed_final["value"] = True
             raise RuntimeError("network glitch")
         attempts.append(kwargs)
 
@@ -368,9 +412,10 @@ def test_process_user_message_retries_on_send_failure(monkeypatch, sql_service):
 
     service.process_user_message(make_request("hi"))
 
-    assert call_count["value"] == 2  # noqa: S101
-    assert attempts[0]["content"] == "Hello"  # noqa: S101
+    contents = [entry["content"] for entry in attempts]
+    assert contents[-1] == "Hello"  # noqa: S101
     assert history.get("user@example.com")[-1]["parts"] == ["Hello"]  # noqa: S101
+    assert failed_final["value"] is True  # noqa: S101
     assert len(logger.errors) == 1  # noqa: S101
 
 
@@ -386,5 +431,10 @@ def test_process_user_message_with_langgraph(monkeypatch, sql_service):
 
     service.process_user_message(make_request("hi"))
 
-    assert zulip.sent[0]["content"] == "LangGraph reply"  # noqa: S101
+    contents = [entry["content"] for entry in zulip.sent]
+    assert contents == [  # noqa: S101
+        "Figuring out the best way to help.",
+        "Drafting a reply about how I work.",
+        "LangGraph reply",
+    ]
     assert history.get("user@example.com")[-1]["parts"] == ["LangGraph reply"]  # noqa: S101
