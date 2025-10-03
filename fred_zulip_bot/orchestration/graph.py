@@ -64,7 +64,7 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
 
     graph = StateGraph(GraphState)
 
-    def classify_intent_node(state: GraphState) -> dict[str, Any]:
+    def classify_intent(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         intent = chat_service.classify_intent(request.message)
         logger.info("LangGraph node=classify_intent_node intent=%s", intent.value)
@@ -80,7 +80,7 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
                 return cleaned
         return IntentType.HANDLE_UNSUPPORTED_FUNCTION.value
 
-    def converse_with_fred_bot_node(state: GraphState) -> dict[str, Any]:
+    def converse_with_fred_bot(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response = chat_service.converse_with_fred_bot(request.message, history)
@@ -90,7 +90,7 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
         )
         return {"response": response}
 
-    def handle_unsupported_function_node(state: GraphState) -> dict[str, Any]:
+    def handle_unsupported_function(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response = chat_service.handle_unsupported_function(request.message, history)
@@ -100,7 +100,7 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
         )
         return {"response": response}
 
-    def query_fred_node(state: GraphState) -> dict[str, Any]:
+    def query_fred(state: GraphState) -> dict[str, Any]:
         request = state["request"]
         history = state["history"]
         response, sql_text, result_text = chat_service.query_fred(
@@ -114,10 +114,10 @@ def build_chat_graph(*, chat_service: ChatGraphService, logger: Any) -> GraphRun
             "result": result_text,
         }
 
-    graph.add_node("classify_intent_node", classify_intent_node)
-    graph.add_node("converse_with_fred_bot_node", converse_with_fred_bot_node)
-    graph.add_node("handle_unsupported_function_node", handle_unsupported_function_node)
-    graph.add_node("query_fred_node", query_fred_node)
+    graph.add_node("classify_intent_node", classify_intent)
+    graph.add_node("converse_with_fred_bot_node", converse_with_fred_bot)
+    graph.add_node("handle_unsupported_function_node", handle_unsupported_function)
+    graph.add_node("query_fred_node", query_fred)
 
     graph.set_entry_point("classify_intent_node")
     graph.add_conditional_edges(
