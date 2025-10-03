@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 from typing import Any
 
-import mysql.connector
+try:
+    MYSQL_CONNECTOR: Any = import_module("mysql.connector")
+except ModuleNotFoundError as exc:  # pragma: no cover - hard dependency
+    raise RuntimeError("mysql-connector-python is required to use MySqlClient") from exc
 
 
 class MySqlClient:
@@ -29,7 +33,7 @@ class MySqlClient:
 
     def select(self, sql: str) -> str:
         try:
-            conn = mysql.connector.connect(
+            conn = MYSQL_CONNECTOR.connect(
                 host=self._host,
                 port=self._port,
                 database=self._database,

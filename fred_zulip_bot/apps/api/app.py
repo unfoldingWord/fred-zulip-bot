@@ -90,6 +90,7 @@ def _build_services() -> dict[str, Any]:
         auth_token=auth_token,
         logger=logger,
         api_key=config.GENAI_API_KEY,
+        enable_langgraph=config.ENABLE_LANGGRAPH,
     )
 
     return {

@@ -16,6 +16,8 @@ This document is the playbook for refactoring and extending **unfoldingWord/fred
 - **Local Checks Before Every Commit (non-negotiable):** run `ruff check fred_zulip_bot tests`,
   `ruff format --check fred_zulip_bot tests`, `mypy fred_zulip_bot`, and `pytest`. Pre-commit hooks
   will fail if you forget, but you must run them manually first.
+- **Match CI Dependencies:** Always install both `requirements.txt` and `requirements-dev.txt`
+  before running the checks so mypy/pytest exercise the same dependency graph that CI uses.
 - **Messages:** **Never** commit with an empty description—subject **and** body are required.
 
 ---
