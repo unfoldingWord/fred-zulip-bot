@@ -213,12 +213,14 @@ class ChatService:
 
         self._logger.info("SQL generated: %s", sql_text)
 
-        if not self._sql_service.is_safe_sql(sql_text):
-            raise ValueError("Unsafe SQL query detected — blocked from execution.")
+        is_safe_sql = self._sql_service.is_safe_sql(sql_text)
+        if is_safe_sql:
+            database_data = self._mysql_client.select(sql_text)
+        else:
+            self._logger.info("Unsafe SQL blocked; using fallback response")
+            database_data = sql_text
 
-        database_data = self._mysql_client.select(sql_text)
-
-        if database_data != "salvage":
+        if is_safe_sql and database_data != "salvage":
             self._logger.info("SQL result captured rows=%s", database_data[:200])
             summary_content = (
                 f"The SQL query returned {database_data}. "
