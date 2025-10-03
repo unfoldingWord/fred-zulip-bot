@@ -43,7 +43,7 @@ def create_app() -> FastAPI:
 
 
 def _build_services() -> dict[str, Any]:
-    max_length = config.HISTORY_MAX_LENGTH or 20
+    max_length = config.HISTORY_MAX_LENGTH or 7
     sql_service = SqlService()
 
     history_repo: HistoryRepository = TinyDbHistoryRepo(

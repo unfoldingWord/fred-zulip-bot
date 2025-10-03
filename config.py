@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,9 +8,9 @@ class Config(BaseSettings):
     model_config = SettingsConfigDict(env_file="./.env", extra="ignore")
 
     # Test variables (optional)
-    ZULIP_BOT_TOKEN_TEST: Optional[str] = None
-    ZULIP_BOT_EMAIL_TEST: Optional[str] = None
-    ZULIP_AUTH_TOKEN_TEST: Optional[str] = None
+    ZULIP_BOT_TOKEN_TEST: str | None = None
+    ZULIP_BOT_EMAIL_TEST: str | None = None
+    ZULIP_AUTH_TOKEN_TEST: str | None = None
 
     TEST_MODE: bool = False
 
@@ -28,7 +27,7 @@ class Config(BaseSettings):
 
     # History storage configuration
     HISTORY_DB_PATH: str = "./data/history.json"
-    HISTORY_MAX_LENGTH: int = 20
+    HISTORY_MAX_LENGTH: int = 7
     ENABLE_LANGGRAPH: bool = True
 
 
