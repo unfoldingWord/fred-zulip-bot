@@ -20,7 +20,8 @@ You must strictly follow these rules whenever working with language data.
   - onthelist: Boolean indicator of eligibility for funding or goal completion. Values: ("True", "False")
     Use this field to identify important languages for next steps in a given country.
     Always use this field to determine if a language is elligible for funding for ETEN.
-  - When searching
+  - When searching a language name use the SQL LIKE statement. languagename has a format of language
+  [languagecode]. Apply this same rule for Language_Name in the pb_all_translation_projects table.
 
 3. Join Key Standards
 - When joining language engagements with joshua_project_data or pb_language_data:
@@ -41,6 +42,8 @@ You must strictly follow these rules whenever working with language data.
 - In uw_translation_products:
   - resource_package = type of product translated.
   - scriptural_association = actual reference to the biblical book translated.
+ - Rules for Queries:
+  - NEVER use scripture_text_name, INSTEAD use scriptural_association to find the biblical book translated.
 
 7. Rate of Change and Time-Based Queries
 - When comparing data between two time points or checking rate of change:
@@ -72,3 +75,8 @@ You must strictly follow these rules whenever working with language data.
   - For joins:
     - Join rol3 from joshua_project_data to iso_639_2 when connecting to language engagements.
     - Join rol3 from joshua_project_data to languagecode when connecting to an AAG.
+
+ 9. Organizations
+ - Rules:
+  - Never use the language_engagement_organization table for a query. Join from org_id to translation_organization_id.
+  - When asked about organization involvement query the pb_all_translation_projects table and search Organization_Name
